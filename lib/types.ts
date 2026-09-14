@@ -21,6 +21,8 @@ export type Autopsy = {
   rootCauses: RootCause[];
   patchDraft?: PatchDraft;
   generatedBy: "http" | "stub";
+  /** Present on teaser payloads so the UI can show remaining locked ranks. */
+  lockedRemaining?: number;
 };
 
 export type JobStatus = "queued" | "running" | "completed" | "failed";

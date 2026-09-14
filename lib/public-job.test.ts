@@ -20,6 +20,7 @@ describe("toPublicJob", () => {
   it("keeps only the top cause until unlock", () => {
     const teaser = toPublicJob(base);
     expect(teaser.artifact?.rootCauses).toHaveLength(1);
+    expect(teaser.artifact?.lockedRemaining).toBe(autopsy.rootCauses.length - 1);
     expect(teaser.artifact?.patchDraft).toBeUndefined();
     expect(redactAutopsy(autopsy).rootCauses[0]?.title).toBe(
       autopsy.rootCauses[0]?.title,

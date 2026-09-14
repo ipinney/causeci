@@ -6,6 +6,7 @@ export function redactAutopsy(autopsy: Autopsy): Autopsy {
     ...autopsy,
     rootCauses: autopsy.rootCauses.slice(0, 1),
     patchDraft: undefined,
+    lockedRemaining: Math.max(0, autopsy.rootCauses.length - 1),
     summary: `${autopsy.summary} Full ranking, remaining causes, and the patch draft are locked until you unlock this autopsy.`,
   };
 }

@@ -55,7 +55,10 @@ export function AutopsyView({
   unlocked: boolean;
 }) {
   const visible = unlocked ? autopsy.rootCauses : autopsy.rootCauses.slice(0, 1);
-  const hiddenCount = Math.max(0, autopsy.rootCauses.length - visible.length);
+  const hiddenCount = unlocked
+    ? 0
+    : (autopsy.lockedRemaining ??
+      Math.max(0, autopsy.rootCauses.length - visible.length));
 
   return (
     <div className="space-y-4">
