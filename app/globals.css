@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0b0c0f;
+  --foreground: #eceef2;
+  --surface: #12141a;
+  --surface-2: #181b23;
+  --border: #2a2e3a;
+  --muted: #8b90a0;
+  --coral: #ff6b4a;
+  --coral-hover: #ff8266;
+  --amber: #f0b429;
+  --green: #3ecf8e;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-coral: var(--coral);
+  --color-coral-hover: var(--coral-hover);
+  --color-amber: var(--amber);
+  --color-green: var(--green);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  background: var(--background);
+}
+
+body {
+  background:
+    radial-gradient(1200px 500px at 10% -10%, #ff6b4a14, transparent 50%),
+    radial-gradient(900px 400px at 100% 0%, #2a2e3a55, transparent 45%),
+    var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+::selection {
+  background: #ff6b4a55;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+    color: #111;
+  }
+}
