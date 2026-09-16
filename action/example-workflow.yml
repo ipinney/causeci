@@ -1,0 +1,31 @@
+# Copy into a consuming repo as .github/workflows/ci.yml
+# Do not enable this file in CauseCI itself unless you want it to run here.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Test
+        run: npm test 2>&1 | tee ci.log
+      - name: CauseCI teaser
+        if: failure()
+        uses: ipinney/causeci/action@main
+        with:
+          log-path: ci.log
+          app-url: https://causeci.vercel.app

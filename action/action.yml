@@ -1,0 +1,32 @@
+name: CauseCI failure teaser
+description: On a failed job, write a truncated teaser and a CauseCI paste link to the job summary (and optionally the pull request).
+author: CauseCI
+branding:
+  icon: activity
+  color: red
+
+inputs:
+  github-token:
+    description: Token used for optional pull-request comments. Job summaries do not need this.
+    required: false
+    default: ${{ github.token }}
+  app-url:
+    description: CauseCI origin used in the paste link.
+    required: false
+    default: https://causeci.vercel.app
+  log-path:
+    description: Optional path to a log file to excerpt. Secrets are redacted. Omit rather than paste credentials.
+    required: false
+    default: ""
+  comment-on-pr:
+    description: If true, create or update a pull-request comment when the event is a pull request.
+    required: false
+    default: "true"
+  max-excerpt-chars:
+    description: Maximum characters of redacted log excerpt to include.
+    required: false
+    default: "600"
+
+runs:
+  using: node20
+  main: post-teaser.js

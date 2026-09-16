@@ -24,6 +24,12 @@ export function SiteHeader() {
             Paste a log
           </Link>
           <Link
+            href="/guides"
+            className="rounded-sm hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-coral"
+          >
+            Guides
+          </Link>
+          <Link
             href="/#pricing"
             className="rounded-sm hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-coral"
           >
