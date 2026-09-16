@@ -13,11 +13,23 @@ Brand: **CauseCI**. Dark theme, coral accent, developer-tool aesthetic.
 - Supabase persistence when configured; otherwise **in-memory** (lost on restart)
 - Pluggable inference: `CAUSECI_INFER_URL` or a deterministic stub so the UI is testable without a model
 
-No GitHub Action integration yet. No secrets belong in this repo.
+No secrets belong in this repo.
+
+## Week-2 distribution (SEO + Action teaser)
+
+Identity / publish surfaces only — no paid ads, no outbound email or DMs.
+
+- Sitemap at [`/sitemap.xml`](https://causeci.vercel.app/sitemap.xml); [`robots.txt`](https://causeci.vercel.app/robots.txt) points at it and still disallows `/jobs/` and `/api/`
+- Home Open Graph / Twitter metadata targets the CI-failure query; guides are linked from the landing page
+- Crawlable guides (App Router):
+  - [Explain this GitHub Actions failure](/guides/explain-github-actions-failure)
+  - [CI log root cause](/guides/ci-log-root-cause)
+  - [GitLab / CircleCI failure autopsy](/guides/gitlab-circleci-failure-autopsy)
+- Optional [GitHub Action teaser](./action/README.md) under `action/` — posts a truncated excerpt + paste link on failure. **Not published to the Marketplace**; install from `ipinney/causeci/action@<ref>`
 
 ## Operator kill metric
 
-If the product records **fewer than 20 paid unlocks AND less than $200 revenue in 30 days**, kill it. Do not add a GitHub Action or more surfaces until that bar is cleared.
+If the product records **fewer than 20 paid unlocks AND less than $200 revenue in 30 days** (soft launch 2026-09-14), kill it. Do not add paid ads or outbound messaging.
 
 ## Local run
 
@@ -126,7 +138,11 @@ and returns:
 npm test
 ```
 
-Covers the stub autopsy ranker and Markdown teaser vs full export.
+Covers the stub autopsy ranker, Markdown teaser vs full export, public sitemap routes, and Action excerpt redaction.
+
+```bash
+node action/post-teaser.js --print
+```
 
 ## License
 

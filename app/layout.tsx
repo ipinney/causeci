@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { PRODUCTION_ORIGIN } from "@/lib/site";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -15,25 +16,36 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(PRODUCTION_ORIGIN),
+  applicationName: "CauseCI",
   title: {
     default: "CauseCI — Explain this GitHub Actions / CI failure",
     template: "%s · CauseCI",
   },
   description:
-    "Paste a failing GitHub Actions or CI/CD log and get a ranked root-cause autopsy with confidence scores and concrete fix steps. Shareable HTML and Markdown artifact.",
+    "Paste a failing GitHub Actions, GitLab, or CircleCI log and get a ranked root-cause autopsy with confidence scores and concrete fix steps. Top cause free; shareable HTML and Markdown artifact.",
   keywords: [
     "explain this GitHub Actions failure",
-    "CI failure",
+    "CI log root cause",
+    "CI failure autopsy",
     "GitHub Actions",
-    "root cause",
-    "CI autopsy",
+    "GitLab CI failure",
+    "CircleCI failure",
     "failing CI log",
   ],
   openGraph: {
     title: "CauseCI — Explain this GitHub Actions / CI failure",
     description:
-      "Paste a red CI log. Get ranked root causes, confidence, and fix steps as a shareable artifact.",
+      "Paste a red CI log. Get ranked root causes, confidence, and fix steps as a shareable artifact. Top cause free.",
+    siteName: "CauseCI",
+    locale: "en_US",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "CauseCI — Explain this GitHub Actions / CI failure",
+    description:
+      "Paste a red GitHub Actions or CI log. Ranked root-cause autopsy — top cause free.",
   },
 };
 

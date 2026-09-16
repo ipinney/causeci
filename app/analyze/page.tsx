@@ -4,7 +4,14 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Paste a CI failure log",
   description:
-    "Paste a failing GitHub Actions or CI log and run a CauseCI autopsy.",
+    "Paste a failing GitHub Actions, GitLab CI, or CircleCI log and run a CauseCI autopsy. The top cause is free.",
+  alternates: { canonical: "/analyze" },
+  openGraph: {
+    title: "Paste a CI failure log · CauseCI",
+    description:
+      "Drop the failed job output. CauseCI ranks likely root causes. The first cause is free.",
+    url: "/analyze",
+  },
 };
 
 export default function AnalyzePage() {
