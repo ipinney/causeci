@@ -1,7 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  async redirects() {
+    return [
+      {
+        source: "/docs/action",
+        destination: "/guides/install-github-action-failure-teaser",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

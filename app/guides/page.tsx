@@ -8,7 +8,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "CI failure guides",
   description:
-    "Short notes on explaining GitHub Actions failures, finding a CI log root cause, and autopsying GitLab or CircleCI jobs. Each page ends in the paste flow.",
+    "Short notes on explaining GitHub Actions failures, finding a CI log root cause, autopsying GitLab or CircleCI jobs, and installing the CauseCI failure-teaser Action. Each page ends in the paste flow.",
   alternates: { canonical: "/guides" },
   openGraph: {
     title: "CI failure guides · CauseCI",
@@ -42,9 +42,10 @@ export default function GuidesIndexPage() {
         How to explain a red CI job
       </h1>
       <p className="mt-4 text-lg leading-8 text-muted">
-        Three crawlable notes for the queries people type when a pipeline is
-        red. Each one is a method you can run by hand, then a teaser autopsy if
-        you want the ranked write-up.
+        Crawlable notes for the queries people type when a pipeline is red —
+        including how to install the optional GitHub Action teaser. Each page
+        is a method you can run by hand, then a teaser autopsy if you want the
+        ranked write-up.
       </p>
 
       <ul className="mt-10 space-y-4">

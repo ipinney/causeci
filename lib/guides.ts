@@ -5,11 +5,24 @@ export type GuideFaq = {
   answer: string;
 };
 
+export type GuideLink = {
+  href: string;
+  label: string;
+  external?: boolean;
+};
+
+export type GuideTable = {
+  headers: string[];
+  rows: string[][];
+};
+
 export type GuideSection = {
   heading: string;
   paragraphs: string[];
   list?: string[];
   code?: { label?: string; content: string };
+  table?: GuideTable;
+  links?: GuideLink[];
 };
 
 export type Guide = {
@@ -24,6 +37,13 @@ export type Guide = {
   sections: GuideSection[];
   faqs: GuideFaq[];
 };
+
+export const ACTION_INSTALL_SLUG = "install-github-action-failure-teaser";
+export const ACTION_INSTALL_PATH = `/guides/${ACTION_INSTALL_SLUG}`;
+export const ACTION_SOURCE_URL =
+  "https://github.com/ipinney/causeci/tree/main/action";
+export const ACTION_README_URL =
+  "https://github.com/ipinney/causeci/blob/main/action/README.md";
 
 export const GUIDES: Guide[] = [
   {
@@ -93,7 +113,7 @@ Missing: typescript@5.6.3 from lock file`,
       {
         question: "Do I need to install a GitHub Action to explain the failure?",
         answer:
-          "No. Paste the log at CauseCI. An optional teaser Action can comment a truncated excerpt and a link back when a job fails; it is not required for an autopsy.",
+          "No. Paste the log at CauseCI. An optional teaser Action can comment a truncated excerpt and a link back when a job fails; it is not required for an autopsy. Install notes live at /guides/install-github-action-failure-teaser.",
       },
     ],
   },
@@ -214,7 +234,7 @@ Actions:  ##[error]  actions/checkout`,
         heading: "Same paste flow, any of these logs",
         paragraphs: [
           "CauseCI does not require a GitLab or Circle install. Paste the failed job output. The teaser returns the top cause; remaining ranks and a patch draft stay locked until you unlock the artifact.",
-          "If you are on GitHub, an optional teaser Action can post a truncated excerpt and a link back to the paste page when a job fails. It is not a Marketplace publish — install it from the CauseCI repo path.",
+          "If you are on GitHub, an optional teaser Action can post a truncated excerpt and a link back to the paste page when a job fails. It is not a Marketplace publish — install it from the CauseCI repo path. The public install page is /guides/install-github-action-failure-teaser.",
         ],
       },
     ],
@@ -228,6 +248,167 @@ Actions:  ##[error]  actions/checkout`,
         question: "Do you store the log forever?",
         answer:
           "Jobs persist in Supabase when that is configured; otherwise they live in process memory and vanish on restart. Do not paste secrets either way.",
+      },
+    ],
+  },
+  {
+    slug: ACTION_INSTALL_SLUG,
+    path: ACTION_INSTALL_PATH,
+    title: "Install the CauseCI GitHub Action",
+    description:
+      "Install the CauseCI failure-teaser Action from the repo path — not the Marketplace. On a red job it posts a truncated excerpt and a paste link. It does not upload your log.",
+    eyebrow: "GitHub Action",
+    lede:
+      "When a GitHub Actions job fails, this Action writes a short teaser and a link back to CauseCI. A human pastes the log. The top cause on the site is free. Nothing is uploaded.",
+    keywords: [
+      "CauseCI GitHub Action",
+      "install GitHub Action failure teaser",
+      "ipinney/causeci/action",
+      "CI failure teaser",
+      "GitHub Actions paste link",
+    ],
+    updatedAt: "2026-09-17",
+    sections: [
+      {
+        heading: "What it does — and what it does not",
+        paragraphs: [
+          "On if: failure(), the Action writes a job summary (and an optional pull-request comment) that tells someone to paste the log at CauseCI. Prefer tee on the failing step so log-path points at a real file.",
+          "It is not on the GitHub Marketplace. Install it from this repository path: uses: ipinney/causeci/action@main. No CauseCI API key, no outbound email, and no secrets belong in the Action folder.",
+        ],
+        list: [
+          "Does: truncated teaser + paste link to /analyze. Top cause on the site is free.",
+          "Does not: upload the log to CauseCI, list on Marketplace, send email, or call paid tools.",
+          "Does not: replace pasting the log. The Action is a reminder, not an autopsy.",
+        ],
+      },
+      {
+        heading: "Copy-paste workflow",
+        paragraphs: [
+          "Add a step that only runs when the job already failed. Capture the failing command with tee so the Action can excerpt the tail. Request pull-requests: write only if you want a PR comment; job summaries work with contents: read.",
+        ],
+        code: {
+          label: ".github/workflows/ci.yml",
+          content: `# .github/workflows/ci.yml
+name: CI
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+  pull-requests: write   # only needed if you want a PR comment
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Test
+        run: npm test 2>&1 | tee ci.log
+      - name: CauseCI teaser
+        if: failure()
+        uses: ipinney/causeci/action@main
+        with:
+          log-path: ci.log`,
+        },
+      },
+      {
+        heading: "Inputs",
+        paragraphs: [
+          "Every input is optional. Job summaries work with the defaults. Set log-path when you teed the failing step; omit it rather than paste credentials into the workflow.",
+        ],
+        table: {
+          headers: ["Name", "Default", "Purpose"],
+          rows: [
+            [
+              "github-token",
+              "${{ github.token }}",
+              "Optional PR comments. Job summaries work without a comment.",
+            ],
+            [
+              "app-url",
+              "https://causeci.vercel.app",
+              "Origin used in the paste link.",
+            ],
+            [
+              "log-path",
+              "(empty)",
+              "Optional file to excerpt. Prefer tee on the failing step.",
+            ],
+            [
+              "comment-on-pr",
+              "true",
+              "Set false to write only $GITHUB_STEP_SUMMARY.",
+            ],
+            [
+              "max-excerpt-chars",
+              "600",
+              "Tail of the redacted log, not the full file.",
+            ],
+          ],
+        },
+      },
+      {
+        heading: "Pin a SHA, and the private-repo caveat",
+        paragraphs: [
+          "Pin a commit SHA instead of @main if you want a frozen install: uses: ipinney/causeci/action@<commit-sha>.",
+          "The CauseCI repository is currently private. Callers need access to ipinney/causeci until the repo is made public. After that, public callers can use the path as-is.",
+        ],
+        code: {
+          label: "Frozen install",
+          content: "uses: ipinney/causeci/action@<commit-sha>",
+        },
+      },
+      {
+        heading: "What gets posted",
+        paragraphs: [
+          "A short explanation plus a Paste the log link to https://causeci.vercel.app/analyze. Repo, workflow, and run metadata when GitHub provides it. An optional details excerpt from log-path after conservative secret redaction (PATs, sk_live_, AKIA…, PEM blocks, Bearer, token= / password= assignments).",
+          "The Action upserts a single comment marked <!-- causeci-teaser --> so retries do not spam the pull request.",
+        ],
+        list: [
+          "Out of scope: Marketplace listing, uploading logs, email or other outbound messaging, paid analytics.",
+        ],
+        links: [
+          {
+            href: ACTION_SOURCE_URL,
+            label: "Action source on GitHub",
+            external: true,
+          },
+          {
+            href: ACTION_README_URL,
+            label: "action/README.md",
+            external: true,
+          },
+          { href: "/analyze", label: "Paste a log on CauseCI" },
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: "Is this Action on the GitHub Marketplace?",
+        answer:
+          "No. Install it from the repository path ipinney/causeci/action@main (or a commit SHA). There is no Marketplace listing.",
+      },
+      {
+        question: "Does the Action upload my CI log?",
+        answer:
+          "No. It writes a truncated teaser and a paste link. A human pastes the log at /analyze. The top cause is free.",
+      },
+      {
+        question: "The CauseCI repo is private — can my workflow use the Action?",
+        answer:
+          "Only if that workflow’s repository can access ipinney/causeci. Private callers need access until the repo is made public.",
+      },
+      {
+        question: "Do I need an API key or paid plan to install it?",
+        answer:
+          "No. There is no CauseCI API key. The Action only posts a reminder. Autopsies still happen when someone pastes the log.",
       },
     ],
   },
