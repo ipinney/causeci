@@ -1,7 +1,7 @@
 import { GuideCta } from "@/components/guide-cta";
 import { JsonLd } from "@/components/json-ld";
 import { PasteForm } from "@/components/paste-form";
-import { GUIDES } from "@/lib/guides";
+import { ACTION_INSTALL_PATH, GUIDES } from "@/lib/guides";
 import { PRODUCTION_ORIGIN } from "@/lib/site";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -104,6 +104,29 @@ export default function HomePage() {
         ))}
       </section>
 
+      <section
+        className="mt-16 rounded-2xl border border-border bg-surface p-5 shadow-[0_0_0_1px_#ff6b4a14]"
+        aria-labelledby="action-heading"
+      >
+        <p className="font-mono text-xs text-coral">GitHub Action</p>
+        <h2 id="action-heading" className="mt-2 text-lg font-semibold tracking-tight">
+          Post a teaser when CI fails
+        </h2>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+          Install from <span className="font-mono text-foreground/90">ipinney/causeci/action@main</span>.
+          Truncated excerpt and a paste link only — no log upload, not Marketplace.
+          The repo is private today; callers need access until it is public.
+        </p>
+        <p className="mt-4">
+          <Link
+            href={ACTION_INSTALL_PATH}
+            className="text-sm font-medium text-coral hover:text-coral-hover"
+          >
+            Install the Action →
+          </Link>
+        </p>
+      </section>
+
       <section className="mt-16" aria-labelledby="guides-heading">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -122,7 +145,7 @@ export default function HomePage() {
             All guides →
           </Link>
         </div>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
           {GUIDES.map((guide) => (
             <article key={guide.slug} className="rounded-xl border border-border bg-surface p-5">
               <p className="font-mono text-xs text-coral">{guide.eyebrow}</p>

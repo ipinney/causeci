@@ -1,3 +1,4 @@
+import { ACTION_INSTALL_PATH } from "@/lib/guides";
 import Link from "next/link";
 
 export function SiteHeader() {
@@ -16,7 +17,7 @@ export function SiteHeader() {
           </span>
           <span className="font-semibold tracking-tight">CauseCI</span>
         </Link>
-        <nav aria-label="Primary" className="flex items-center gap-4 text-sm text-muted">
+        <nav aria-label="Primary" className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 text-sm text-muted">
           <Link
             href="/analyze"
             className="rounded-sm hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-coral"
@@ -28,6 +29,12 @@ export function SiteHeader() {
             className="rounded-sm hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-coral"
           >
             Guides
+          </Link>
+          <Link
+            href={ACTION_INSTALL_PATH}
+            className="rounded-sm hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-coral"
+          >
+            Action
           </Link>
           <Link
             href="/#pricing"

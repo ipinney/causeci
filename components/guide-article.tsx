@@ -110,6 +110,39 @@ export function GuideArticle({ guide }: { guide: Guide }) {
               ))}
             </ul>
           ) : null}
+          {section.table ? (
+            <div className="mt-4 overflow-x-auto rounded-lg border border-border bg-surface">
+              <table className="w-full min-w-[36rem] border-collapse text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border text-xs uppercase tracking-wider text-muted">
+                    {section.table.headers.map((header) => (
+                      <th key={header} scope="col" className="px-4 py-3 font-semibold">
+                        {header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {section.table.rows.map((row) => (
+                    <tr key={row[0]} className="border-b border-border last:border-b-0">
+                      {row.map((cell, index) => (
+                        <td
+                          key={`${row[0]}-${index}`}
+                          className={`px-4 py-3 align-top leading-6 ${
+                            index === 0
+                              ? "font-mono text-xs text-coral"
+                              : "text-foreground/90"
+                          }`}
+                        >
+                          {cell}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
           {section.code ? (
             <figure className="mt-4">
               {section.code.label ? (
@@ -121,6 +154,30 @@ export function GuideArticle({ guide }: { guide: Guide }) {
                 {section.code.content}
               </pre>
             </figure>
+          ) : null}
+          {section.links ? (
+            <ul className="mt-4 space-y-2">
+              {section.links.map((item) => (
+                <li key={item.href}>
+                  {item.external ? (
+                    <a
+                      href={item.href}
+                      className="text-sm font-medium text-coral hover:text-coral-hover"
+                      rel="noreferrer"
+                    >
+                      {item.label} →
+                    </a>
+                  ) : (
+                    <Link
+                      href={item.href}
+                      className="text-sm font-medium text-coral hover:text-coral-hover"
+                    >
+                      {item.label} →
+                    </Link>
+                  )}
+                </li>
+              ))}
+            </ul>
           ) : null}
         </section>
       ))}

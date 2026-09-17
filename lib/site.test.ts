@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { GUIDES } from "./guides";
+import {
+  ACTION_INSTALL_PATH,
+  ACTION_README_URL,
+  ACTION_SOURCE_URL,
+  GUIDES,
+  getGuide,
+} from "./guides";
 import {
   PRODUCTION_ORIGIN,
   absoluteUrl,
@@ -24,6 +30,7 @@ describe("public SEO routes", () => {
       "/guides/explain-github-actions-failure",
       "/guides/ci-log-root-cause",
       "/guides/gitlab-circleci-failure-autopsy",
+      ACTION_INSTALL_PATH,
     ]);
     expect(paths.some((path) => path.startsWith("/jobs"))).toBe(false);
     expect(paths.some((path) => path.startsWith("/api"))).toBe(false);
@@ -44,12 +51,35 @@ describe("public SEO routes", () => {
   });
 
   it("keeps each guide useful: lede, sections, CTA-related FAQ, and a paste path", () => {
-    expect(GUIDES).toHaveLength(3);
+    expect(GUIDES).toHaveLength(4);
     for (const guide of GUIDES) {
       expect(guide.lede.length).toBeGreaterThan(40);
       expect(guide.sections.length).toBeGreaterThanOrEqual(3);
       expect(guide.faqs.length).toBeGreaterThanOrEqual(2);
       expect(guide.path.startsWith("/guides/")).toBe(true);
     }
+  });
+
+  it("documents the Action install path for strangers", () => {
+    const guide = getGuide("install-github-action-failure-teaser");
+    expect(guide).toBeDefined();
+    expect(guide?.path).toBe(ACTION_INSTALL_PATH);
+    const yaml = guide?.sections.find((section) => section.code?.content.includes("uses: ipinney/causeci/action@main"));
+    expect(yaml?.code?.content).toContain("if: failure()");
+    expect(yaml?.code?.content).toContain("tee ci.log");
+    expect(yaml?.code?.content).toContain("permissions:");
+    const inputs = guide?.sections.find((section) => section.table);
+    expect(inputs?.table?.headers).toEqual(["Name", "Default", "Purpose"]);
+    expect(inputs?.table?.rows.some((row) => row[0] === "log-path")).toBe(true);
+    const privateNote = guide?.sections.some((section) =>
+      section.paragraphs.some((paragraph) =>
+        paragraph.includes("currently private"),
+      ),
+    );
+    expect(privateNote).toBe(true);
+    const links = guide?.sections.flatMap((section) => section.links ?? []);
+    expect(links?.some((link) => link.href === ACTION_SOURCE_URL)).toBe(true);
+    expect(links?.some((link) => link.href === ACTION_README_URL)).toBe(true);
+    expect(links?.some((link) => link.href === "/analyze")).toBe(true);
   });
 });
