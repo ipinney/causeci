@@ -121,7 +121,8 @@ describe("public SEO routes", () => {
     expect(body).toMatch(/vitest FAIL/i);
     expect(body).toContain("/analyze");
     expect(body).toContain(ACTION_INSTALL_PATH);
-    expect(body).not.toMatch(/Marketplace publish|listed on the Marketplace/i);
+    expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
+    expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
     const links = guide?.sections.flatMap((section) => section.links ?? []);
     expect(links?.some((link) => link.href === "/analyze")).toBe(true);
     expect(links?.some((link) => link.href === ACTION_INSTALL_PATH)).toBe(true);
