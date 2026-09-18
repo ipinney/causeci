@@ -252,6 +252,113 @@ Actions:  ##[error]  actions/checkout`,
     ],
   },
   {
+    slug: "npm-test-failed-github-actions",
+    path: "/guides/npm-test-failed-github-actions",
+    title: "npm test failed in GitHub Actions",
+    description:
+      "How to read a red npm test step in GitHub Actions: distinguish a lockfile install failure from a Jest or Vitest FAIL, and ignore Process completed with exit code 1.",
+    eyebrow: "npm test · Jest · Vitest",
+    lede:
+      "When npm test fails in GitHub Actions, the last line is almost always Process completed with exit code 1. That is a wrapper. The cause is the first real error — a lockfile refusal, a Jest assertion, or a Vitest FAIL.",
+    keywords: [
+      "npm test failed GitHub Actions",
+      "jest failed CI",
+      "vitest FAIL CI",
+      "Process completed with exit code 1",
+      "lockfile vs test failure",
+    ],
+    updatedAt: "2026-09-18",
+    sections: [
+      {
+        heading: "Start at the first FAIL, not exit code 1",
+        paragraphs: [
+          "A red npm test step almost always ends with Process completed with exit code 1. That line only means the process died. Scroll up in the failing step to the first FAIL, AssertionError, Error:, or npm error. That sentence is the diagnosis you are trying to name.",
+          "Annotations in the Checks UI can point at a later upload or notify step that only failed because tests already died. Collapse every green step. The hang or crash is almost always the first non-zero exit.",
+        ],
+        list: [
+          "Search the raw job log for FAIL, AssertionError, npm error, and ##[error].",
+          "Quote the first of those lines — do not paraphrase the wrapper.",
+          "If the first error is in an install step, npm test never ran. Treat that as a lockfile or installer failure.",
+        ],
+      },
+      {
+        heading: "Lockfile vs test: did npm test even run?",
+        paragraphs: [
+          "Lockfile drift and a failing assertion look the same in the Checks UI: a red job and exit code 1. They are not the same failure. npm ci / pnpm --frozen-lockfile / yarn --frozen-lockfile refuse to install when package.json and the lockfile disagree. If that step is red, the test runner never started.",
+          "A real test failure happens after install succeeded. You will see a runner banner (vitest run, jest, or > npm test) and then FAIL plus Expected / Received. Reproduce with the same command CI used: npm ci && npm test, not a local npm install that already mutated the lockfile.",
+        ],
+        list: [
+          "Lockfile: npm error `npm ci` can only install… / Missing: … from lock file / ERR_PNPM_OUTDATED_LOCKFILE. Fix by committing package.json and the lockfile together.",
+          "Test: FAIL path/to/file.test.ts, AssertionError, Expected: / Received:. Open that file and line; re-run only that spec locally.",
+          "If both appear in one paste, rank the lockfile first. Tests after a failed install are leftover output or a later job.",
+        ],
+        code: {
+          label: "Same exit code, two different first errors",
+          content: `# Lockfile — npm test never ran
+npm error \`npm ci\` can only install packages when your
+package.json and package-lock.json are in sync.
+Missing: typescript@5.6.3 from lock file
+Error: Process completed with exit code 1
+
+# Test — install was green
+> vitest run
+ FAIL  src/billing.test.ts > Checkout > applies summer coupon
+AssertionError: expected 20 to be 18
+##[error]Process completed with exit code 1`,
+        },
+      },
+      {
+        heading: "Jest failed CI vs vitest FAIL",
+        paragraphs: [
+          "Jest and Vitest print different banners, same method. Find the first FAIL, then the file and assertion. A Jest failed CI log usually shows FAIL plus Expected / Received and a stack. Vitest FAIL CI logs show FAIL  path/to/file.test.ts, a ❯ pointer, and AssertionError. Neither wrapper is the cause.",
+          "Re-run the cited file with the same Node version and CI=true. If it passes locally and fails only on the runner, look at timezone, locale, and env — not the exit code.",
+        ],
+        list: [
+          "Jest: npx jest path/to/file.test.ts --runInBand",
+          "Vitest: npx vitest run path/to/file.test.ts",
+          "Match CI: same Node, frozen lockfile, CI=true.",
+        ],
+        code: {
+          label: "What to copy from the Actions log",
+          content: `FAIL  src/billing.test.ts > Checkout > applies summer coupon
+AssertionError: expected 20 to be 18
+ ❯ src/billing.test.ts:42:22`,
+        },
+      },
+      {
+        heading: "Paste the log when the first error is still unclear",
+        paragraphs: [
+          "If the log is long or the first error is buried under npm noise, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install notes live at /guides/install-github-action-failure-teaser.",
+        ],
+        links: [
+          { href: "/analyze", label: "Paste a log on CauseCI" },
+          {
+            href: ACTION_INSTALL_PATH,
+            label: "Optional: install the failure-teaser Action",
+          },
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: "Why does GitHub say Process completed with exit code 1 after npm test?",
+        answer:
+          "That line is a wrapper. The job died because an earlier command returned non-zero. Scroll up to the first FAIL, AssertionError, or npm error — that is the cause.",
+      },
+      {
+        question: "How do I tell a lockfile failure from a Jest or Vitest FAIL?",
+        answer:
+          "If npm ci (or a frozen lockfile install) is the first red step, tests never ran. A Jest failed CI or vitest FAIL CI log shows a runner banner and FAIL plus Expected / Received after install succeeded.",
+      },
+      {
+        question: "Do I need to install a GitHub Action to explain npm test failed GitHub Actions?",
+        answer:
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace.",
+      },
+    ],
+  },
+  {
     slug: ACTION_INSTALL_SLUG,
     path: ACTION_INSTALL_PATH,
     title: "Install the CauseCI GitHub Action",
@@ -267,7 +374,7 @@ Actions:  ##[error]  actions/checkout`,
       "CI failure teaser",
       "GitHub Actions paste link",
     ],
-    updatedAt: "2026-09-17",
+    updatedAt: "2026-09-18",
     sections: [
       {
         heading: "What it does — and what it does not",
@@ -355,10 +462,10 @@ jobs:
         },
       },
       {
-        heading: "Pin a SHA, and the private-repo caveat",
+        heading: "Pin a SHA; private caller repos are fine",
         paragraphs: [
           "Pin a commit SHA instead of @main if you want a frozen install: uses: ipinney/causeci/action@<commit-sha>.",
-          "The CauseCI repository is currently private. Callers need access to ipinney/causeci until the repo is made public. After that, public callers can use the path as-is.",
+          "CauseCI is a public repository. Public callers can use ipinney/causeci/action@main (or a pinned SHA) without requesting access. Private caller repositories are fine — GitHub Actions can consume a public Action from a private workflow.",
         ],
         code: {
           label: "Frozen install",
@@ -401,9 +508,9 @@ jobs:
           "No. It writes a truncated teaser and a paste link. A human pastes the log at /analyze. The top cause is free.",
       },
       {
-        question: "The CauseCI repo is private — can my workflow use the Action?",
+        question: "Can a private repository use the Action?",
         answer:
-          "Only if that workflow’s repository can access ipinney/causeci. Private callers need access until the repo is made public.",
+          "Yes. CauseCI is public. Public callers use ipinney/causeci/action@main (or a pinned SHA). A private caller repo does not need extra access to this Action.",
       },
       {
         question: "Do I need an API key or paid plan to install it?",
