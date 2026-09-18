@@ -14,6 +14,7 @@ export const metadata: Metadata = {
     "Explain this GitHub Actions or CI failure: paste the red log and get a ranked root-cause autopsy with confidence and fix steps. Top cause free.",
   keywords: [
     "explain this GitHub Actions failure",
+    "npm test failed GitHub Actions",
     "CI log root cause",
     "GitLab CI failure autopsy",
     "CircleCI failure",
@@ -113,9 +114,9 @@ export default function HomePage() {
           Post a teaser when CI fails
         </h2>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-          Install from <span className="font-mono text-foreground/90">ipinney/causeci/action@main</span>.
-          Truncated excerpt and a paste link only — no log upload, not Marketplace.
-          The repo is private today; callers need access until it is public.
+          Install from <span className="font-mono text-foreground/90">ipinney/causeci/action@main</span>{" "}
+          (or a pinned SHA). Truncated excerpt and a paste link only — no log
+          upload, not Marketplace. CauseCI is public; private caller repos are fine.
         </p>
         <p className="mt-4">
           <Link

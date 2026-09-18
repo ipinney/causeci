@@ -45,7 +45,7 @@ Pin a commit SHA instead of `@main` if you want a frozen install:
 uses: ipinney/causeci/action@<commit-sha>
 ```
 
-Private callers need access to this repository. Public callers can use the path as-is.
+CauseCI is a public repository. Public callers can use `ipinney/causeci/action@main` (or a pinned SHA). Private caller repositories are fine — they do not need extra access to this Action.
 
 A copy-paste workflow also lives in [`example-workflow.yml`](./example-workflow.yml). Do not put that file under `.github/workflows/` unless you intend this repo to run it.
 

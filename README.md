@@ -25,6 +25,7 @@ Identity / publish surfaces only — no paid ads, no outbound email or DMs.
   - [Explain this GitHub Actions failure](/guides/explain-github-actions-failure)
   - [CI log root cause](/guides/ci-log-root-cause)
   - [GitLab / CircleCI failure autopsy](/guides/gitlab-circleci-failure-autopsy)
+  - [npm test failed in GitHub Actions](/guides/npm-test-failed-github-actions)
   - [Install the CauseCI GitHub Action](/guides/install-github-action-failure-teaser) (`/docs/action` redirects here)
 - Optional [GitHub Action teaser](./action/README.md) under `action/` — posts a truncated excerpt + paste link on failure. **Not published to the Marketplace**; install from `ipinney/causeci/action@<ref>`. Public install docs: [/guides/install-github-action-failure-teaser](https://causeci.vercel.app/guides/install-github-action-failure-teaser)
 

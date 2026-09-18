@@ -30,6 +30,7 @@ describe("public SEO routes", () => {
       "/guides/explain-github-actions-failure",
       "/guides/ci-log-root-cause",
       "/guides/gitlab-circleci-failure-autopsy",
+      "/guides/npm-test-failed-github-actions",
       ACTION_INSTALL_PATH,
     ]);
     expect(paths.some((path) => path.startsWith("/jobs"))).toBe(false);
@@ -51,7 +52,7 @@ describe("public SEO routes", () => {
   });
 
   it("keeps each guide useful: lede, sections, CTA-related FAQ, and a paste path", () => {
-    expect(GUIDES).toHaveLength(4);
+    expect(GUIDES).toHaveLength(5);
     for (const guide of GUIDES) {
       expect(guide.lede.length).toBeGreaterThan(40);
       expect(guide.sections.length).toBeGreaterThanOrEqual(3);
@@ -71,15 +72,59 @@ describe("public SEO routes", () => {
     const inputs = guide?.sections.find((section) => section.table);
     expect(inputs?.table?.headers).toEqual(["Name", "Default", "Purpose"]);
     expect(inputs?.table?.rows.some((row) => row[0] === "log-path")).toBe(true);
-    const privateNote = guide?.sections.some((section) =>
-      section.paragraphs.some((paragraph) =>
-        paragraph.includes("currently private"),
+    const publicNote = guide?.sections.some((section) =>
+      section.paragraphs.some(
+        (paragraph) =>
+          paragraph.includes("public repository") &&
+          paragraph.includes("ipinney/causeci/action@main") &&
+          paragraph.includes("Private caller"),
       ),
     );
-    expect(privateNote).toBe(true);
+    expect(publicNote).toBe(true);
+    const stalePrivate = [guide?.lede, ...(guide?.sections.flatMap((section) => section.paragraphs) ?? []), ...(guide?.faqs.map((faq) => `${faq.question} ${faq.answer}`) ?? [])].some(
+      (text) =>
+        /currently private|until the repo is made public|until it is public/i.test(
+          text ?? "",
+        ),
+    );
+    expect(stalePrivate).toBe(false);
+    expect(guide?.updatedAt).toBe("2026-09-18");
     const links = guide?.sections.flatMap((section) => section.links ?? []);
     expect(links?.some((link) => link.href === ACTION_SOURCE_URL)).toBe(true);
     expect(links?.some((link) => link.href === ACTION_README_URL)).toBe(true);
     expect(links?.some((link) => link.href === "/analyze")).toBe(true);
+  });
+
+  it("documents npm test vs lockfile for GitHub Actions", () => {
+    const guide = getGuide("npm-test-failed-github-actions");
+    expect(guide).toBeDefined();
+    expect(guide?.path).toBe("/guides/npm-test-failed-github-actions");
+    expect(guide?.updatedAt).toBe("2026-09-18");
+    expect(guide?.keywords).toEqual(
+      expect.arrayContaining([
+        "npm test failed GitHub Actions",
+        "jest failed CI",
+        "vitest FAIL CI",
+        "Process completed with exit code 1",
+      ]),
+    );
+    const body = [
+      guide?.lede,
+      ...(guide?.sections.flatMap((section) => [
+        ...section.paragraphs,
+        ...(section.list ?? []),
+        section.code?.content ?? "",
+      ]) ?? []),
+      ...(guide?.faqs.map((faq) => `${faq.question} ${faq.answer}`) ?? []),
+    ].join("\n");
+    expect(body).toMatch(/lockfile/i);
+    expect(body).toMatch(/vitest FAIL/i);
+    expect(body).toContain("/analyze");
+    expect(body).toContain(ACTION_INSTALL_PATH);
+    expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
+    expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
+    const links = guide?.sections.flatMap((section) => section.links ?? []);
+    expect(links?.some((link) => link.href === "/analyze")).toBe(true);
+    expect(links?.some((link) => link.href === ACTION_INSTALL_PATH)).toBe(true);
   });
 });
