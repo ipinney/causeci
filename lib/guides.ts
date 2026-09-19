@@ -359,6 +359,116 @@ AssertionError: expected 20 to be 18
     ],
   },
   {
+    slug: "eslint-failed-github-actions",
+    path: "/guides/eslint-failed-github-actions",
+    title: "ESLint failed in GitHub Actions",
+    description:
+      "How to read a red ESLint / npm run lint step in GitHub Actions: distinguish a config or plugin install failure from a real lint violation, and ignore Process completed with exit code 1.",
+    eyebrow: "ESLint · npm run lint",
+    lede:
+      "When ESLint fails in GitHub Actions, the last line is almost always Process completed with exit code 1. That is a wrapper. The cause is the first real error — a missing plugin or config, or a file:line error plus ✖.",
+    keywords: [
+      "eslint failed GitHub Actions",
+      "ESLint Process completed with exit code 1",
+      "npm run lint failed CI",
+      "Process completed with exit code 1",
+      "ESLint plugin install failure",
+    ],
+    updatedAt: "2026-09-19",
+    sections: [
+      {
+        heading: "Start at the first error / ✖, not exit code 1",
+        paragraphs: [
+          "A red npm run lint or eslint step almost always ends with Process completed with exit code 1. That line only means the process died. Scroll up in the failing step to the first error, ✖, ##[error], or ESLint: line. That sentence is the diagnosis you are trying to name.",
+          "Annotations in the Checks UI can point at a later upload or notify step that only failed because lint already died. Collapse every green step. The hang or crash is almost always the first non-zero exit.",
+        ],
+        list: [
+          "Search the raw job log for error, ✖, ##[error], Failed to load, and Cannot find module.",
+          "Quote the first of those lines — do not paraphrase the wrapper.",
+          "If the first error is in an install step, npm run lint never ran. Treat that as a lockfile or installer failure.",
+        ],
+      },
+      {
+        heading: "Config/plugin install vs a real lint violation",
+        paragraphs: [
+          "A missing plugin and a rule violation look the same in the Checks UI: a red job and exit code 1. They are not the same failure. Failed to load config, Failed to load plugin, Cannot find module 'eslint-plugin-…', or ESLint couldn't find a config file means the linter never graded your source. If npm ci (or a frozen lockfile install) is red, lint never started.",
+          "A real lint violation happens after ESLint loaded. You will see a path, a line:column, the word error, a rule id, and usually ✖ N problems. Reproduce with the same command CI used: npm ci && npm run lint, not an editor overlay that already mutated the lockfile or used a different config.",
+        ],
+        list: [
+          "Install / config: Failed to load config… / Failed to load plugin… / Cannot find module 'eslint-plugin-…' / ESLint couldn't find eslint.config.*. Fix by committing the plugin (or shareable config) in package.json and the lockfile together, then re-run npm ci.",
+          "Violation: path/to/file.ts:12:5  error  …  some-rule. Open that file and rule; re-run only that file locally.",
+          "If both appear in one paste, rank the install or config load first. Violations after a failed load are leftover output or a later job.",
+        ],
+        code: {
+          label: "Same exit code, two different first errors",
+          content: `# Config / plugin — ESLint never graded source
+Oops! Something went wrong! :(
+ESLint: 9.12.0
+
+Error: Failed to load plugin 'react' declared in 'eslint.config.mjs':
+Cannot find module 'eslint-plugin-react'
+Error: Process completed with exit code 1
+
+# Violation — config loaded
+/home/runner/work/app/src/index.ts
+  12:5  error  'foo' is assigned a value but never used  no-unused-vars
+
+✖ 1 problem (1 error, 0 warnings)
+##[error]Process completed with exit code 1`,
+        },
+      },
+      {
+        heading: "Reproduce locally with the same Node and frozen lockfile",
+        paragraphs: [
+          "Editor squiggles are not the CI gate. Match the runner: same Node as actions/setup-node, a frozen lockfile install, then the exact lint script. If CI uses npm ci && npm run lint -- --max-warnings=0, run that — not npx eslint on a dirty node_modules.",
+          "If it passes locally and fails only on the runner, the first error is usually a missing plugin in the committed lockfile, a different ESLint major, or a config file that exists on your laptop but was never committed.",
+        ],
+        list: [
+          "Node: nvm use (or fnm) to the version in setup-node. Confirm with node -v.",
+          "Install: npm ci — or pnpm install --frozen-lockfile / yarn --frozen-lockfile.",
+          "Lint: CI=true npm run lint. Re-run one file with npx eslint path/to/file.ts once the full script fails the same way.",
+        ],
+        code: {
+          label: "What to copy from the Actions log",
+          content: `/home/runner/work/app/src/index.ts
+  12:5  error  'foo' is assigned a value but never used  no-unused-vars
+✖ 1 problem (1 error, 0 warnings)`,
+        },
+      },
+      {
+        heading: "Paste the log when the first error is still unclear",
+        paragraphs: [
+          "If the log is long or the first error is buried under npm noise, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser.",
+        ],
+        links: [
+          { href: "/analyze", label: "Paste a log on CauseCI" },
+          {
+            href: ACTION_INSTALL_PATH,
+            label: "Optional: install the failure-teaser Action",
+          },
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: "Why does GitHub say Process completed with exit code 1 after ESLint?",
+        answer:
+          "That line is a wrapper. The job died because an earlier command returned non-zero. Scroll up to the first error, ✖, or ##[error] — that is the cause.",
+      },
+      {
+        question: "How do I tell a config or plugin install failure from a real lint violation?",
+        answer:
+          "If npm ci is red, or ESLint prints Failed to load config / Failed to load plugin / Cannot find module, lint never graded your files. A real npm run lint failed CI violation shows a path, line:column, error, a rule id, and usually ✖ N problems after the config loaded.",
+      },
+      {
+        question: "Do I need to install a GitHub Action to explain eslint failed GitHub Actions?",
+        answer:
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+      },
+    ],
+  },
+  {
     slug: ACTION_INSTALL_SLUG,
     path: ACTION_INSTALL_PATH,
     title: "Install the CauseCI GitHub Action",

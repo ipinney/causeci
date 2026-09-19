@@ -28,6 +28,12 @@ export function SiteFooter() {
           >
             GitLab / CircleCI
           </Link>
+          <Link
+            href="/guides/eslint-failed-github-actions"
+            className="hover:text-foreground"
+          >
+            ESLint
+          </Link>
           <Link href="/analyze" className="hover:text-foreground">
             Paste a log
           </Link>
