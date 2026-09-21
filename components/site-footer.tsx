@@ -34,6 +34,12 @@ export function SiteFooter() {
           >
             ESLint
           </Link>
+          <Link
+            href="/guides/typescript-failed-github-actions"
+            className="hover:text-foreground"
+          >
+            TypeScript
+          </Link>
           <Link href="/analyze" className="hover:text-foreground">
             Paste a log
           </Link>

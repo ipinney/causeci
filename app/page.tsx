@@ -16,6 +16,7 @@ export const metadata: Metadata = {
     "explain this GitHub Actions failure",
     "npm test failed GitHub Actions",
     "eslint failed GitHub Actions",
+    "typescript failed GitHub Actions",
     "CI log root cause",
     "GitLab CI failure autopsy",
     "CircleCI failure",

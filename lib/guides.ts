@@ -469,6 +469,111 @@ Error: Process completed with exit code 1
     ],
   },
   {
+    slug: "typescript-failed-github-actions",
+    path: "/guides/typescript-failed-github-actions",
+    title: "TypeScript / tsc failed in GitHub Actions",
+    description:
+      "How to read a red tsc / npm run build / npx tsc --noEmit step in GitHub Actions: distinguish an install or node_modules failure from a real type error, and ignore Process completed with exit code 1.",
+    eyebrow: "TypeScript · tsc · npm run build",
+    lede:
+      "When TypeScript fails in GitHub Actions, the last line is almost always Process completed with exit code 1. That is a wrapper. The cause is the first real error — a missing typescript / node_modules install, or error TSxxxx at a file:line.",
+    keywords: [
+      "typescript failed GitHub Actions",
+      "tsc failed CI",
+      "npx tsc --noEmit failed",
+      "Process completed with exit code 1",
+      "error TS GitHub Actions",
+    ],
+    updatedAt: "2026-09-21",
+    sections: [
+      {
+        heading: "Start at the first error TS, not exit code 1",
+        paragraphs: [
+          "A red tsc, npm run build, or npx tsc --noEmit step almost always ends with Process completed with exit code 1. That line only means the process died. Scroll up in the failing step to the first error TS, Type error:, Cannot find module, or ##[error]. That sentence is the diagnosis you are trying to name.",
+          "Annotations in the Checks UI can point at a later upload or notify step that only failed because the compiler already died. Collapse every green step. The hang or crash is almost always the first non-zero exit.",
+        ],
+        list: [
+          "Search the raw job log for error TS, Type error:, Cannot find module, and ##[error].",
+          "Quote the first of those lines — do not paraphrase the wrapper.",
+          "If the first error is in an install step, tsc never ran. Treat that as a lockfile or installer failure.",
+        ],
+      },
+      {
+        heading: "Install / node_modules vs a real type error",
+        paragraphs: [
+          "A missing typescript package and a type mismatch look the same in the Checks UI: a red job and exit code 1. They are not the same failure. Cannot find module 'typescript', tsc: not found, or a red npm ci / frozen lockfile install means the compiler never typed your source. If node_modules is missing or cache-restored empty, npx tsc --noEmit never started.",
+          "A real type error happens after tsc loaded. You will see path:line:col - error TSxxxx and usually Found N errors. Next.js npm run build wraps the same codes as Type error:. Reproduce with the same command CI used: npm ci && npx tsc --noEmit (or npm run build), not a laptop tsc that already has a dirty node_modules.",
+        ],
+        list: [
+          "Install / node_modules: Cannot find module 'typescript' / tsc: not found / npm error `npm ci` can only install… / Missing: typescript@… from lock file. Fix by committing package.json and the lockfile together, then re-run npm ci.",
+          "Type error: src/app.ts:12:3 - error TS2322: Type 'string' is not assignable to type 'number'. Open that file and line; re-run npx tsc --noEmit locally.",
+          "If both appear in one paste, rank the install or missing node_modules first. error TS lines after a failed install are leftover output or a later job.",
+        ],
+        code: {
+          label: "Same exit code, two different first errors",
+          content: `# Install / node_modules — tsc never typed source
+npm error \`npm ci\` can only install packages when your
+package.json and package-lock.json are in sync.
+Missing: typescript@5.6.3 from lock file
+Error: Process completed with exit code 1
+
+# Type error — compiler loaded
+src/app.ts:12:3 - error TS2322: Type 'string' is not assignable to type 'number'.
+Found 1 error in src/app.ts:12
+##[error]Process completed with exit code 1`,
+        },
+      },
+      {
+        heading: "Reproduce locally with the same Node and frozen lockfile",
+        paragraphs: [
+          "Editor squiggles are not the CI gate. Match the runner: same Node as actions/setup-node, a frozen lockfile install, then the exact compile script. If CI uses npm ci && npx tsc --noEmit, run that — not tsc on a dirty node_modules or a different tsconfig.",
+          "If it passes locally and fails only on the runner, the first error is usually a missing typescript (or @types) package in the committed lockfile, a different TypeScript major, or a tsconfig that exists on your laptop but was never committed.",
+        ],
+        list: [
+          "Node: nvm use (or fnm) to the version in setup-node. Confirm with node -v.",
+          "Install: npm ci — or pnpm install --frozen-lockfile / yarn --frozen-lockfile.",
+          "Compile: CI=true npx tsc --noEmit. If CI runs npm run build, run that once the noEmit command fails the same way.",
+        ],
+        code: {
+          label: "What to copy from the Actions log",
+          content: `src/app.ts:12:3 - error TS2322: Type 'string' is not assignable to type 'number'.
+Found 1 error in src/app.ts:12`,
+        },
+      },
+      {
+        heading: "Paste the log when the first error is still unclear",
+        paragraphs: [
+          "If the log is long or the first error is buried under npm noise, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser.",
+        ],
+        links: [
+          { href: "/analyze", label: "Paste a log on CauseCI" },
+          {
+            href: ACTION_INSTALL_PATH,
+            label: "Optional: install the failure-teaser Action",
+          },
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: "Why does GitHub say Process completed with exit code 1 after tsc?",
+        answer:
+          "That line is a wrapper. The job died because an earlier command returned non-zero. Scroll up to the first error TS, Type error:, or ##[error] — that is the cause.",
+      },
+      {
+        question: "How do I tell an install or node_modules failure from a real type error?",
+        answer:
+          "If npm ci is red, or the log prints Cannot find module 'typescript' / tsc: not found, the compiler never typed your files. A real tsc failed CI or npx tsc --noEmit failed log shows path:line:col - error TSxxxx (or Next.js Type error:) after the compiler loaded.",
+      },
+      {
+        question: "Do I need to install a GitHub Action to explain typescript failed GitHub Actions?",
+        answer:
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+      },
+    ],
+  },
+  {
     slug: ACTION_INSTALL_SLUG,
     path: ACTION_INSTALL_PATH,
     title: "Install the CauseCI GitHub Action",
