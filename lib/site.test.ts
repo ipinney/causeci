@@ -32,6 +32,7 @@ describe("public SEO routes", () => {
       "/guides/gitlab-circleci-failure-autopsy",
       "/guides/npm-test-failed-github-actions",
       "/guides/eslint-failed-github-actions",
+      "/guides/typescript-failed-github-actions",
       ACTION_INSTALL_PATH,
     ]);
     expect(paths.some((path) => path.startsWith("/jobs"))).toBe(false);
@@ -53,7 +54,7 @@ describe("public SEO routes", () => {
   });
 
   it("keeps each guide useful: lede, sections, CTA-related FAQ, and a paste path", () => {
-    expect(GUIDES).toHaveLength(6);
+    expect(GUIDES).toHaveLength(7);
     for (const guide of GUIDES) {
       expect(guide.lede.length).toBeGreaterThan(40);
       expect(guide.sections.length).toBeGreaterThanOrEqual(3);
@@ -153,6 +154,42 @@ describe("public SEO routes", () => {
     ].join("\n");
     expect(body).toMatch(/Failed to load (config|plugin)|Cannot find module/i);
     expect(body).toMatch(/✖/);
+    expect(body).toMatch(/frozen lockfile|npm ci/i);
+    expect(body).toContain("/analyze");
+    expect(body).toContain(ACTION_INSTALL_PATH);
+    expect(body).toContain("ipinney/causeci/action@main");
+    expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
+    expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
+    const links = guide?.sections.flatMap((section) => section.links ?? []);
+    expect(links?.some((link) => link.href === "/analyze")).toBe(true);
+    expect(links?.some((link) => link.href === ACTION_INSTALL_PATH)).toBe(true);
+  });
+
+  it("documents TypeScript vs install/node_modules for GitHub Actions", () => {
+    const guide = getGuide("typescript-failed-github-actions");
+    expect(guide).toBeDefined();
+    expect(guide?.path).toBe("/guides/typescript-failed-github-actions");
+    expect(guide?.updatedAt).toBe("2026-09-21");
+    expect(guide?.keywords).toEqual(
+      expect.arrayContaining([
+        "typescript failed GitHub Actions",
+        "tsc failed CI",
+        "npx tsc --noEmit failed",
+        "Process completed with exit code 1",
+      ]),
+    );
+    const body = [
+      guide?.lede,
+      ...(guide?.sections.flatMap((section) => [
+        ...section.paragraphs,
+        ...(section.list ?? []),
+        section.code?.content ?? "",
+      ]) ?? []),
+      ...(guide?.faqs.map((faq) => `${faq.question} ${faq.answer}`) ?? []),
+    ].join("\n");
+    expect(body).toMatch(/error TS|Type error:/i);
+    expect(body).toMatch(/node_modules|Cannot find module 'typescript'/i);
+    expect(body).toMatch(/npx tsc --noEmit|npm run build/i);
     expect(body).toMatch(/frozen lockfile|npm ci/i);
     expect(body).toContain("/analyze");
     expect(body).toContain(ACTION_INSTALL_PATH);
