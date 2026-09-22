@@ -33,6 +33,7 @@ describe("public SEO routes", () => {
       "/guides/npm-test-failed-github-actions",
       "/guides/eslint-failed-github-actions",
       "/guides/typescript-failed-github-actions",
+      "/guides/pytest-failed-github-actions",
       ACTION_INSTALL_PATH,
     ]);
     expect(paths.some((path) => path.startsWith("/jobs"))).toBe(false);
@@ -54,7 +55,7 @@ describe("public SEO routes", () => {
   });
 
   it("keeps each guide useful: lede, sections, CTA-related FAQ, and a paste path", () => {
-    expect(GUIDES).toHaveLength(7);
+    expect(GUIDES).toHaveLength(8);
     for (const guide of GUIDES) {
       expect(guide.lede.length).toBeGreaterThan(40);
       expect(guide.sections.length).toBeGreaterThanOrEqual(3);
@@ -191,6 +192,42 @@ describe("public SEO routes", () => {
     expect(body).toMatch(/node_modules|Cannot find module 'typescript'/i);
     expect(body).toMatch(/npx tsc --noEmit|npm run build/i);
     expect(body).toMatch(/frozen lockfile|npm ci/i);
+    expect(body).toContain("/analyze");
+    expect(body).toContain(ACTION_INSTALL_PATH);
+    expect(body).toContain("ipinney/causeci/action@main");
+    expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
+    expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
+    const links = guide?.sections.flatMap((section) => section.links ?? []);
+    expect(links?.some((link) => link.href === "/analyze")).toBe(true);
+    expect(links?.some((link) => link.href === ACTION_INSTALL_PATH)).toBe(true);
+  });
+
+  it("documents pytest vs pip install / requirements for GitHub Actions", () => {
+    const guide = getGuide("pytest-failed-github-actions");
+    expect(guide).toBeDefined();
+    expect(guide?.path).toBe("/guides/pytest-failed-github-actions");
+    expect(guide?.updatedAt).toBe("2026-09-22");
+    expect(guide?.keywords).toEqual(
+      expect.arrayContaining([
+        "pytest failed GitHub Actions",
+        "pytest failed CI",
+        "Process completed with exit code 1",
+        "FAILED tests",
+        "pip install / requirements drift",
+      ]),
+    );
+    const body = [
+      guide?.lede,
+      ...(guide?.sections.flatMap((section) => [
+        ...section.paragraphs,
+        ...(section.list ?? []),
+        section.code?.content ?? "",
+      ]) ?? []),
+      ...(guide?.faqs.map((faq) => `${faq.question} ${faq.answer}`) ?? []),
+    ].join("\n");
+    expect(body).toMatch(/FAILED/);
+    expect(body).toMatch(/pip install|requirements/i);
+    expect(body).toMatch(/assert|AssertionError/i);
     expect(body).toContain("/analyze");
     expect(body).toContain(ACTION_INSTALL_PATH);
     expect(body).toContain("ipinney/causeci/action@main");
