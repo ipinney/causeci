@@ -337,6 +337,10 @@ AssertionError: expected 20 to be 18
             href: ACTION_INSTALL_PATH,
             label: "Optional: install the failure-teaser Action",
           },
+          {
+            href: "/guides/pytest-failed-github-actions",
+            label: "pytest failed in GitHub Actions",
+          },
         ],
       },
     ],
@@ -568,6 +572,112 @@ Found 1 error in src/app.ts:12`,
       },
       {
         question: "Do I need to install a GitHub Action to explain typescript failed GitHub Actions?",
+        answer:
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+      },
+    ],
+  },
+  {
+    slug: "pytest-failed-github-actions",
+    path: "/guides/pytest-failed-github-actions",
+    title: "pytest failed in GitHub Actions",
+    description:
+      "How to read a red pytest / python -m pytest step in GitHub Actions: distinguish a pip install or requirements drift failure from a real FAILED test, and ignore Process completed with exit code 1.",
+    eyebrow: "pytest · Python · pip",
+    lede:
+      "When pytest fails in GitHub Actions, the last line is almost always Process completed with exit code 1. That is a wrapper. The cause is the first real error — a pip install / requirements drift, or a FAILED test with an assertion.",
+    keywords: [
+      "pytest failed GitHub Actions",
+      "pytest failed CI",
+      "Process completed with exit code 1",
+      "FAILED tests",
+      "pip install / requirements drift",
+    ],
+    updatedAt: "2026-09-22",
+    sections: [
+      {
+        heading: "Start at the first FAILED / ERROR, not exit code 1",
+        paragraphs: [
+          "A red pytest or python -m pytest step almost always ends with Process completed with exit code 1. That line only means the process died. Scroll up in the failing step to the first FAILED, ERROR, E   AssertionError, ModuleNotFoundError, or ##[error]. That sentence is the diagnosis you are trying to name.",
+          "Annotations in the Checks UI can point at a later upload or notify step that only failed because pytest already died. Collapse every green step. The hang or crash is almost always the first non-zero exit.",
+        ],
+        list: [
+          "Search the raw job log for FAILED, ERROR, AssertionError, ModuleNotFoundError, and ##[error].",
+          "Quote the first of those lines — do not paraphrase the wrapper.",
+          "If the first error is in a pip install / setup-python step, pytest never ran. Treat that as an install or requirements failure.",
+        ],
+      },
+      {
+        heading: "pip install / requirements drift vs a real FAILED test",
+        paragraphs: [
+          "A broken pip install and a failing assertion look the same in the Checks UI: a red job and exit code 1. They are not the same failure. Could not find a version that satisfies…, No matching distribution found, ERROR: ResolutionImpossible, or ModuleNotFoundError before any test collection means pytest never graded your suite. If the install / setup step is red, the runner never started.",
+          "A real FAILED test happens after install and collection succeeded. You will see a pytest banner, then FAILED path/to/test_….py::test_name, short test summary info, and usually = N failed. Reproduce with the same Python and deps CI used: pip install -r requirements.txt && pytest, not a laptop venv that already drifted from the committed requirements or lock file.",
+        ],
+        list: [
+          "Install / requirements: Could not find a version that satisfies… / No matching distribution found for … / ERROR: ResolutionImpossible / ModuleNotFoundError: No module named '…' during collection. Fix by committing requirements.txt (or poetry.lock / uv.lock / Pipfile.lock) with the same pins CI installs, then re-run the install step.",
+          "FAILED test: FAILED tests/test_billing.py::test_coupon - AssertionError: assert 20 == 18. Open that file and assertion; re-run only that node id locally.",
+          "If both appear in one paste, rank the install or requirements drift first. FAILED lines after a failed pip install are leftover output or a later job.",
+        ],
+        code: {
+          label: "Same exit code, two different first errors",
+          content: `# Install / requirements — pytest never ran
+ERROR: Could not find a version that satisfies the requirement
+requests==2.31.0 (from -r requirements.txt (line 3))
+No matching distribution found for requests==2.31.0
+Error: Process completed with exit code 1
+
+# FAILED test — install and collection were green
+=========================== short test summary info ============================
+FAILED tests/test_billing.py::test_coupon - AssertionError: assert 20 == 18
+============================== 1 failed in 0.12s ===============================
+##[error]Process completed with exit code 1`,
+        },
+      },
+      {
+        heading: "Reproduce locally with the same Python and deps as CI",
+        paragraphs: [
+          "A local venv is not the CI gate. Match the runner: same Python as actions/setup-python, the same requirements or lock install, then the exact pytest command. If CI uses pip install -r requirements.txt && pytest -q, run that — not pytest on a dirty site-packages that already has extra packages.",
+          "If it passes locally and fails only on the runner, the first error is usually requirements drift (uncommitted pin change), a different Python minor, missing system libs, or an env var / secret the laptop already has.",
+        ],
+        list: [
+          "Python: pyenv (or conda) to the version in setup-python. Confirm with python -V.",
+          "Install: pip install -r requirements.txt — or poetry install --no-root / uv sync / pipenv install --deploy with the committed lock.",
+          "Test: CI=true pytest. Re-run one node with pytest path/to/test_file.py::test_name once the full suite fails the same way.",
+        ],
+        code: {
+          label: "What to copy from the Actions log",
+          content: `FAILED tests/test_billing.py::test_coupon - AssertionError: assert 20 == 18
+============================== 1 failed in 0.12s ===============================`,
+        },
+      },
+      {
+        heading: "Paste the log when the first error is still unclear",
+        paragraphs: [
+          "If the log is long or the first error is buried under pip noise, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser.",
+        ],
+        links: [
+          { href: "/analyze", label: "Paste a log on CauseCI" },
+          {
+            href: ACTION_INSTALL_PATH,
+            label: "Optional: install the failure-teaser Action",
+          },
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: "Why does GitHub say Process completed with exit code 1 after pytest?",
+        answer:
+          "That line is a wrapper. The job died because an earlier command returned non-zero. Scroll up to the first FAILED, ERROR, AssertionError, or ##[error] — that is the cause.",
+      },
+      {
+        question: "How do I tell a pip install / requirements failure from a real FAILED test?",
+        answer:
+          "If pip install (or poetry / uv / pipenv) is red, or the log prints Could not find a version / No matching distribution / ModuleNotFoundError before collection, pytest never graded your suite. A real pytest failed CI log shows FAILED path::test_name and short test summary info after install succeeded.",
+      },
+      {
+        question: "Do I need to install a GitHub Action to explain pytest failed GitHub Actions?",
         answer:
           "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
       },
