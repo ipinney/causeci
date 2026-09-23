@@ -684,6 +684,142 @@ FAILED tests/test_billing.py::test_coupon - AssertionError: assert 20 == 18
     ],
   },
   {
+    slug: "jest-failed-github-actions",
+    path: "/guides/jest-failed-github-actions",
+    title: "Jest failed in GitHub Actions",
+    description:
+      "How to read a red Jest / npx jest / npm test step in GitHub Actions: distinguish an npm ci or node_modules drift failure from a real Jest FAIL, and ignore Process completed with exit code 1.",
+    eyebrow: "Jest · npm test · npm ci",
+    lede:
+      "When Jest fails in GitHub Actions, the last line is almost always Process completed with exit code 1. That is a wrapper. The cause is the first real error — an npm ci / node_modules drift, or a FAIL with Expected / Received.",
+    keywords: [
+      "jest failed GitHub Actions",
+      "jest failed CI",
+      "Process completed with exit code 1",
+      "Test Suites failed",
+      "npm ci / node_modules drift",
+    ],
+    updatedAt: "2026-09-23",
+    sections: [
+      {
+        heading: "Start at the first FAIL, not exit code 1",
+        paragraphs: [
+          "A red npx jest or npm test step almost always ends with Process completed with exit code 1. Ignore that wrapper line. It only means the process died. Scroll up in the failing step to the first FAIL path, Expected / Received, Test Suites: N failed, or ##[error]. That sentence is the diagnosis you are trying to name.",
+          "Annotations in the Checks UI can point at a later upload or notify step that only failed because Jest already died. Collapse every green step. The hang or crash is almost always the first non-zero exit.",
+        ],
+        list: [
+          "Search the raw job log for FAIL, Expected, Received, Test Suites:, and ##[error].",
+          "Quote the first of those lines — do not paraphrase the wrapper.",
+          "If the first error is in an npm ci or install step, Jest never ran. Treat that as install or node_modules drift.",
+        ],
+      },
+      {
+        heading: "npm ci / node_modules drift vs a real Jest FAIL",
+        paragraphs: [
+          "A broken install and a failing assertion look the same in the Checks UI: a red job and exit code 1. They are not the same failure. npm error `npm ci` can only install…, Missing: … from lock file, Cannot find module 'jest', or jest: not found means the runner never graded your suite. If node_modules is missing, cache-restored empty, or drifted from the lockfile, npx jest never started.",
+          "A real Jest FAIL happens after install succeeded. You will see a Jest banner, then FAIL path/to/file.test.ts, Expected / Received, and Test Suites: N failed. Reproduce with the same command CI used: npm ci && npx jest, or npm ci && npm test when the script is jest — not a laptop npm install that already mutated node_modules.",
+        ],
+        list: [
+          "Install / node_modules: npm error `npm ci` can only install… / Missing: … from lock file / Cannot find module 'jest' / jest: not found. Fix by committing package.json and the lockfile together, then re-run npm ci.",
+          "Jest FAIL: FAIL path/to/file.test.ts with Expected: 18 / Received: 20, then Test Suites: N failed. Open that file and assertion; re-run only that path locally.",
+          "If both appear in one paste, rank the install or node_modules drift first. FAIL lines after a failed npm ci are leftover output or a later job.",
+        ],
+        code: {
+          label: "Same exit code, two different first errors",
+          content: `# Install / node_modules — Jest never ran
+npm error \`npm ci\` can only install packages when your
+package.json and package-lock.json are in sync.
+Missing: jest@29.7.0 from lock file
+Error: Process completed with exit code 1
+
+# Jest FAIL — install was green
+FAIL src/billing.test.ts
+  ● Checkout › applies summer coupon
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 18
+    Received: 20
+
+Test Suites: 1 failed, 4 passed, 5 total
+Tests:       1 failed, 12 passed, 13 total
+##[error]Process completed with exit code 1`,
+        },
+      },
+      {
+        heading: "Reproduce locally with the same command CI used",
+        paragraphs: [
+          "A warm node_modules on your laptop is not the CI gate. Match the runner: same Node as actions/setup-node, a frozen lockfile install, then the exact Jest command. If CI uses npm ci && npx jest, run that — not jest on a dirty node_modules or a jest.config that was never committed.",
+          "If the workflow script is npm test and package.json runs jest, reproduce with npm ci && npm test. If it passes locally and fails only on the runner, the first error is usually lockfile drift, a different Node major, timezone or CI=true, or an env var the laptop already has.",
+        ],
+        list: [
+          "Node: nvm use (or fnm) to the version in setup-node. Confirm with node -v.",
+          "Install: npm ci — do not reuse a laptop node_modules that drifted from the lockfile.",
+          "Test: CI=true npx jest, or npm test when that script is jest. The full reproduce is npm ci && npx jest (or npm ci && npm test). Re-run one file with npx jest path/to/file.test.ts --runInBand.",
+        ],
+        code: {
+          label: "What to copy from the Actions log",
+          content: `FAIL src/billing.test.ts
+  ● Checkout › applies summer coupon
+    Expected: 18
+    Received: 20
+Test Suites: 1 failed, 4 passed, 5 total`,
+        },
+      },
+      {
+        heading: "Paste the log when the first error is still unclear",
+        paragraphs: [
+          "If the log is long or the first error is buried under npm noise, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser.",
+        ],
+        links: [
+          { href: "/analyze", label: "Paste a log on CauseCI" },
+          {
+            href: ACTION_INSTALL_PATH,
+            label: "Optional: install the failure-teaser Action",
+          },
+          {
+            href: "/guides/npm-test-failed-github-actions",
+            label: "npm test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/typescript-failed-github-actions",
+            label: "TypeScript / tsc failed in GitHub Actions",
+          },
+          {
+            href: "/guides/eslint-failed-github-actions",
+            label: "ESLint failed in GitHub Actions",
+          },
+          {
+            href: "/guides/pytest-failed-github-actions",
+            label: "pytest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/explain-github-actions-failure",
+            label: "Explain this GitHub Actions failure",
+          },
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: "Why does GitHub say Process completed with exit code 1 after Jest?",
+        answer:
+          "That line is a wrapper. Ignore it. The job died because an earlier command returned non-zero. Scroll up to the first FAIL path, Expected / Received, or Test Suites: N failed — that is the cause.",
+      },
+      {
+        question: "How do I tell an npm ci or node_modules failure from a real Jest FAIL?",
+        answer:
+          "If npm ci is red, or the log prints Cannot find module 'jest' / jest: not found / Missing: … from lock file, Jest never graded your suite. A real jest failed CI log shows FAIL path/to/file.test.ts, Expected / Received, and Test Suites: N failed after install succeeded.",
+      },
+      {
+        question: "Do I need to install a GitHub Action to explain jest failed GitHub Actions?",
+        answer:
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+      },
+    ],
+  },
+  {
     slug: ACTION_INSTALL_SLUG,
     path: ACTION_INSTALL_PATH,
     title: "Install the CauseCI GitHub Action",
