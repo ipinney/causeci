@@ -36,6 +36,7 @@ describe("public SEO routes", () => {
       "/guides/typescript-failed-github-actions",
       "/guides/pytest-failed-github-actions",
       "/guides/jest-failed-github-actions",
+      "/guides/vitest-failed-github-actions",
       ACTION_INSTALL_PATH,
     ]);
     expect(paths.some((path) => path.startsWith("/jobs"))).toBe(false);
@@ -57,7 +58,7 @@ describe("public SEO routes", () => {
   });
 
   it("keeps each guide useful: lede, sections, CTA-related FAQ, and a paste path", () => {
-    expect(GUIDES).toHaveLength(9);
+    expect(GUIDES).toHaveLength(10);
     expect(new Set(GUIDES.map((guide) => guide.slug)).size).toBe(GUIDES.length);
     expect(new Set(GUIDES.map((guide) => guide.path)).size).toBe(GUIDES.length);
     for (const guide of GUIDES) {
@@ -302,5 +303,75 @@ describe("public SEO routes", () => {
       ]),
     );
     expect(related).not.toContain("jest-failed-github-actions");
+  });
+
+  it("documents Vitest vs npm ci / lockfile for GitHub Actions", () => {
+    const guide = getGuide("vitest-failed-github-actions");
+    expect(guide).toBeDefined();
+    expect(guide?.path).toBe("/guides/vitest-failed-github-actions");
+    expect(guide?.updatedAt).toBe("2026-09-24");
+    expect(guide?.keywords).toEqual(
+      expect.arrayContaining([
+        "vitest failed GitHub Actions",
+        "vitest FAIL CI",
+        "vitest Process completed with exit code 1",
+        "Process completed with exit code 1",
+      ]),
+    );
+    const body = [
+      guide?.lede,
+      ...(guide?.sections.flatMap((section) => [
+        ...section.paragraphs,
+        ...(section.list ?? []),
+        section.code?.content ?? "",
+      ]) ?? []),
+      ...(guide?.faqs.map((faq) => `${faq.question} ${faq.answer}`) ?? []),
+    ].join("\n");
+    expect(body).toMatch(/FAIL  /);
+    expect(body).toMatch(/AssertionError/);
+    expect(body).toMatch(/RUN  v/);
+    expect(body).toMatch(/npx vitest run/);
+    expect(body).toMatch(/npm test/);
+    expect(body).toMatch(/npm ci/);
+    expect(body).toMatch(/lockfile/i);
+    expect(body).toMatch(/jsdom/);
+    expect(body).toMatch(/happy-dom/);
+    expect(body).toMatch(/snapshot/i);
+    expect(body).toMatch(/timed out/i);
+    expect(body).toMatch(/pool=forks|forks pool/);
+    expect(body).toMatch(/Failed to resolve import/);
+    expect(body).toMatch(/\[vite:esbuild\] Transform failed/);
+    expect(body).toContain("Process completed with exit code 1");
+    expect(body).toContain("/analyze");
+    expect(body).toContain(ACTION_INSTALL_PATH);
+    expect(body).toContain("ipinney/causeci/action@main");
+    expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
+    expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
+    const links = guide?.sections.flatMap((section) => section.links ?? []) ?? [];
+    expect(links.some((link) => link.href === "/analyze")).toBe(true);
+    expect(links.some((link) => link.href === ACTION_INSTALL_PATH)).toBe(true);
+    for (const href of [
+      "/guides/jest-failed-github-actions",
+      "/guides/npm-test-failed-github-actions",
+      "/guides/typescript-failed-github-actions",
+      "/guides/eslint-failed-github-actions",
+      "/guides/pytest-failed-github-actions",
+      "/guides/explain-github-actions-failure",
+    ]) {
+      expect(links.some((link) => link.href === href)).toBe(true);
+    }
+    const related = otherGuides("vitest-failed-github-actions").map((item) => item.slug);
+    expect(related).toEqual(
+      expect.arrayContaining([
+        "jest-failed-github-actions",
+        "npm-test-failed-github-actions",
+        "typescript-failed-github-actions",
+        "eslint-failed-github-actions",
+        "pytest-failed-github-actions",
+        "install-github-action-failure-teaser",
+        "explain-github-actions-failure",
+      ]),
+    );
+    expect(related).not.toContain("vitest-failed-github-actions");
   });
 });

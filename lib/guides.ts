@@ -820,6 +820,202 @@ Test Suites: 1 failed, 4 passed, 5 total`,
     ],
   },
   {
+    slug: "vitest-failed-github-actions",
+    path: "/guides/vitest-failed-github-actions",
+    title: "Vitest failed in GitHub Actions",
+    description:
+      "How to read a red Vitest / npx vitest run / npm test step in GitHub Actions: distinguish an npm ci or lockfile failure from a real Vitest FAIL, and ignore Process completed with exit code 1.",
+    eyebrow: "Vitest · npx vitest run · pool",
+    lede:
+      "When Vitest fails in GitHub Actions, the last line is almost always Process completed with exit code 1. That is a wrapper. The cause is the first real error — a lockfile or install refusal, or a Vitest FAIL (assertion, import, jsdom/happy-dom, snapshot, timeout, or worker OOM).",
+    keywords: [
+      "vitest failed GitHub Actions",
+      "vitest FAIL CI",
+      "vitest Process completed with exit code 1",
+      "Process completed with exit code 1",
+      "npx vitest run failed",
+    ],
+    updatedAt: "2026-09-24",
+    sections: [
+      {
+        heading: "Start at the first FAIL, not exit code 1",
+        paragraphs: [
+          "A red npx vitest run or npm test step almost always ends with Process completed with exit code 1. Ignore that wrapper line. It only means the process died. Scroll up in the failing step to the first RUN  v banner, FAIL  path, AssertionError, Failed to resolve import, or ##[error]. That sentence is the diagnosis you are trying to name.",
+          "Vitest does not print Jest's Test Suites: line or Expected: / Received: labels. A vitest FAIL CI log starts with RUN  vX.Y.Z, then FAIL  src/file.test.ts > suite > name, an AssertionError, and a ❯ frame. If you only see Test Suites:, you are looking at Jest.",
+        ],
+        list: [
+          "Search the raw job log for RUN  v, FAIL  , AssertionError, Failed to resolve import, and ##[error].",
+          "Quote the first of those lines — do not paraphrase the wrapper Process completed with exit code 1.",
+          "If the first error is in an npm ci or install step, Vitest never ran. Treat that as lockfile or install drift.",
+        ],
+      },
+      {
+        heading: "Common Vitest CI failures",
+        paragraphs: [
+          "After install succeeded, the first red block is one of a short list. A Vite transform or unresolved import fails before any expect() runs. An assertion, snapshot, timeout, environment, or worker crash fails after the file loaded. The npm test guide covers whichever runner sits behind npm test; this page is the Vitest banner, pool, and Vite transform.",
+          "Pool and forks are Vitest-specific. CI often sets --pool=forks or maxWorkers. Too many workers on a small runner dies as Killed, exit 137, JavaScript heap out of memory, or Worker terminated due to reaching memory limit — not as an assertion. Shrink fileParallelism or maxForks before raising NODE_OPTIONS.",
+        ],
+        list: [
+          "Assertion: FAIL  src/billing.test.ts > Checkout > applies summer coupon, then AssertionError: expected 20 to be 18. Open that file and line.",
+          "Import / Vite transform: Failed to resolve import \"@/lib/coupon\" or [vite:esbuild] Transform failed. The test body never ran. Fix the specifier, the tsconfig paths alias, or the syntax error Vite is compiling.",
+          "jsdom / happy-dom: ReferenceError: document is not defined or window is not defined means the file ran in the node environment. Cannot find package 'jsdom' or MISSING DEPENDENCY happy-dom means the environment package is not installed. Match environment in vitest.config to what the test touches.",
+          "Snapshot: Snapshot `Invoice > renders the header 1` mismatched, or a toMatchSnapshot / toMatchFileSnapshot diff. Re-run npx vitest run -u only after the new output is the one you want, then commit the snapshot.",
+          "Timeout: Test timed out in 5000ms, or a hook timed out. A hung fetch, an uncleared timer, or vitest left in watch mode (no run, and CI unset) waits until the job limit.",
+          "OOM / workers: exit 137, Killed, or a forks pool that spawned more workers than the runner can hold. Re-run with --pool=forks --maxWorkers=2, or the same flags CI used, reduced.",
+        ],
+        code: {
+          label: "Vitest FAIL log excerpt",
+          content: ` RUN  v3.2.4 /home/runner/work/app/app
+
+ ❯ src/billing.test.ts (3 tests | 1 failed) 28ms
+   × Checkout > applies summer coupon 12ms
+     → expected 20 to be 18
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/billing.test.ts > Checkout > applies summer coupon
+AssertionError: expected 20 to be 18
+
+- Expected
++ Received
+
+- 18
++ 20
+
+ ❯ src/billing.test.ts:42:28
+     40|   const total = applyCoupon(cart, "SUMMER");
+     41|
+     42|   expect(total).toBe(18);
+       |                            ^
+     43| });
+
+ Test Files  1 failed | 4 passed (5)
+      Tests  1 failed | 12 passed (13)
+   Start at  14:02:11
+   Duration  1.84s (transform 210ms, setup 0ms, collect 480ms, tests 90ms, environment 1.12s, prepare 320ms)
+
+##[error]Process completed with exit code 1`,
+        },
+      },
+      {
+        heading: "Reproduce with the same CI command",
+        paragraphs: [
+          "A warm node_modules and a Vitest watch session on your laptop are not the CI gate. Match the runner: same Node as actions/setup-node, a frozen lockfile install, then the exact Vitest command. If CI uses npx vitest run, run that. If the workflow script is npm test and package.json invokes vitest, reproduce with npm ci && npm test.",
+          "vitest without run stays in watch mode unless CI=true. GitHub Actions sets CI, so a script of vitest usually exits there. A local shell without CI set hangs with no FAIL. Pass run when you copy the command off the runner, and pass the same --pool=forks or --maxWorkers flags the workflow used.",
+        ],
+        list: [
+          "Node: nvm use (or fnm) to the version in setup-node. Confirm with node -v.",
+          "Install: npm ci — do not reuse a laptop node_modules that drifted from the lockfile.",
+          "Test: CI=true npx vitest run, or npm test when that script invokes vitest. The full reproduce is npm ci && npx vitest run (or npm ci && npm test). One file: npx vitest run src/billing.test.ts.",
+        ],
+        code: {
+          label: "Same command the runner used",
+          content: `npm ci && npx vitest run
+# when package.json "test" invokes vitest:
+npm ci && npm test
+# one file, same pool CI used:
+npx vitest run src/billing.test.ts --pool=forks --maxWorkers=2`,
+        },
+      },
+      {
+        heading: "When the lockfile failed first, tests never ran",
+        paragraphs: [
+          "A broken install and a failing assertion look the same in the Checks UI: a red job and exit code 1. They are not the same failure. npm error `npm ci` can only install…, Missing: vitest@… from lock file, ERR_PNPM_OUTDATED_LOCKFILE, Cannot find module 'vitest', or vitest: not found means the runner never graded your suite. If node_modules is missing or the lockfile drifted, npx vitest run never started.",
+          "If both an install error and a FAIL appear in one paste, rank the lockfile first. FAIL lines after a failed npm ci are leftover output or a later job. Do not debug jsdom, snapshots, or forks until the install step is green.",
+        ],
+        list: [
+          "Install / lockfile: npm error `npm ci` can only install… / Missing: … from lock file / Cannot find module 'vitest' / vitest: not found. Commit package.json and the lockfile together, then re-run npm ci.",
+          "Vitest FAIL: a RUN  v banner, then FAIL  path > name, after npm ci was green.",
+          "Jest prints FAIL path and Test Suites: N failed. Vitest prints RUN  v, FAIL  file > name, and Vite transform errors. The npm test guide is the split for any script; this page is only the Vitest runner.",
+        ],
+        code: {
+          label: "Same exit code, two different first errors",
+          content: `# Install / lockfile — Vitest never ran
+npm error \`npm ci\` can only install packages when your
+package.json and package-lock.json are in sync.
+Missing: vitest@3.2.4 from lock file
+Error: Process completed with exit code 1
+
+# Vitest FAIL — install was green
+ RUN  v3.2.4 /home/runner/work/app/app
+
+ FAIL  src/billing.test.ts > Checkout > applies summer coupon
+AssertionError: expected 20 to be 18
+ ❯ src/billing.test.ts:42:28
+
+ Test Files  1 failed | 4 passed (5)
+##[error]Process completed with exit code 1
+
+# Vite transform — collection failed before the assertion
+src/billing.ts:40:0: ERROR: Expected "}" but found end of file
+[vite:esbuild] Transform failed with 1 error:
+src/billing.ts:40:0: ERROR: Expected "}" but found end of file
+##[error]Process completed with exit code 1`,
+        },
+      },
+      {
+        heading: "Paste the log when the first error is still unclear",
+        paragraphs: [
+          "If the log is long or the first error is buried under Vite transform noise, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser.",
+        ],
+        links: [
+          { href: "/analyze", label: "Paste a log on CauseCI" },
+          {
+            href: ACTION_INSTALL_PATH,
+            label: "Optional: install the failure-teaser Action",
+          },
+          {
+            href: "/guides/jest-failed-github-actions",
+            label: "Jest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/npm-test-failed-github-actions",
+            label: "npm test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/typescript-failed-github-actions",
+            label: "TypeScript / tsc failed in GitHub Actions",
+          },
+          {
+            href: "/guides/eslint-failed-github-actions",
+            label: "ESLint failed in GitHub Actions",
+          },
+          {
+            href: "/guides/pytest-failed-github-actions",
+            label: "pytest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/explain-github-actions-failure",
+            label: "Explain this GitHub Actions failure",
+          },
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: "Why does GitHub say Process completed with exit code 1 after Vitest?",
+        answer:
+          "That line is a wrapper. The phrase vitest Process completed with exit code 1 is the wrapper, not the diagnosis. Scroll up to the first FAIL  path, AssertionError, Failed to resolve import, or ##[error] — that is the cause.",
+      },
+      {
+        question: "How do I tell an npm ci or lockfile failure from a real Vitest FAIL?",
+        answer:
+          "If npm ci is red, or the log prints Cannot find module 'vitest' / vitest: not found / Missing: … from lock file, Vitest never graded your suite. A real vitest FAIL CI log shows a RUN  v banner, FAIL  path > name, and AssertionError after install succeeded.",
+      },
+      {
+        question: "How is a Vitest failure different from Jest or a generic npm test failure?",
+        answer:
+          "Jest prints FAIL path, Expected / Received, and Test Suites: N failed. Vitest prints RUN  v, FAIL  file > name, a ❯ frame, Vite transform errors (Failed to resolve import, [vite:esbuild] Transform failed), and pool/forks worker lines. If you are not sure which runner npm test invoked, start with the npm test guide.",
+      },
+      {
+        question: "Do I need to install a GitHub Action to explain vitest failed GitHub Actions?",
+        answer:
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+      },
+    ],
+  },
+  {
     slug: ACTION_INSTALL_SLUG,
     path: ACTION_INSTALL_PATH,
     title: "Install the CauseCI GitHub Action",
