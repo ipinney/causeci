@@ -1016,6 +1016,216 @@ src/billing.ts:40:0: ERROR: Expected "}" but found end of file
     ],
   },
   {
+    slug: "playwright-failed-github-actions",
+    path: "/guides/playwright-failed-github-actions",
+    title: "Playwright failed in GitHub Actions",
+    description:
+      "How to read a red Playwright / npx playwright test step in GitHub Actions: distinguish a browser install, missing OS libraries, or version skew from a real e2e failure, and ignore Process completed with exit code 1.",
+    eyebrow: "Playwright · npx playwright test · browsers",
+    lede:
+      "When Playwright fails in GitHub Actions, the last line is almost always Process completed with exit code 1. That is a wrapper. The cause is the first real error — browsers not installed, missing OS libraries, a version skew, a headed launch with no display, a timeout, or a failed e2e assertion.",
+    keywords: [
+      "playwright failed GitHub Actions",
+      "playwright test failed CI",
+      "playwright Process completed with exit code 1",
+      "Process completed with exit code 1",
+      "npx playwright test failed",
+    ],
+    updatedAt: "2026-09-25",
+    sections: [
+      {
+        heading: "Start at the first error, not exit code 1",
+        paragraphs: [
+          "A red npx playwright test step almost always ends with Process completed with exit code 1. Ignore that wrapper line. It only means the process died. Scroll up in the failing step to the first Error:, browserType.launch, Executable doesn't exist, Test timeout of, or ##[error]. That sentence is the diagnosis you are trying to name.",
+          "Playwright does not print Jest's FAIL path or Test Suites: line, and it does not print Vitest's RUN  v banner. A playwright test failed CI log starts with Running N tests using M workers, then a ✘ line, then 1) [chromium] › path:line › title and an Error: block. If you only see FAIL path or RUN  v, you are looking at Jest or Vitest.",
+        ],
+        list: [
+          "Search the raw job log for Error:, browserType.launch, Executable doesn't exist, Test timeout of, and ##[error].",
+          "Quote the first of those lines — do not paraphrase the wrapper Process completed with exit code 1.",
+          "If the first error is in an npm ci or install step, Playwright never ran. Treat that as lockfile or install drift.",
+        ],
+      },
+      {
+        heading: "Common Playwright CI failures",
+        paragraphs: [
+          "After the npm install succeeded, the first red block is one of a short list. Rank it in this order. A missing browser or a missing system library fails before any test body runs. A timeout, assertion, flake, or screenshot diff fails after the browser launched. The npm test guide covers whichever runner sits behind npm test; this page is the Playwright browser, project, and trace.",
+          "Playwright's own CI notes recommend workers: 1 on GitHub-hosted runners so each test gets the machine. More workers than cores shows up as timeouts and flakes, not as a clear 'too many workers' line. Caching browser binaries is not recommended: restore time is about the same as a download, and OS libraries are not cacheable. If a workflow caches ~/.cache/ms-playwright anyway, the cache key has to include the Playwright version or the next bump launches a revision that is not in the cache.",
+        ],
+        list: [
+          "npm package missing: Cannot find module '@playwright/test' or playwright: not found. The suite never started. Fix the lockfile install before you touch a spec.",
+          "Browsers missing or the wrong revision: browserType.launch: Executable doesn't exist at …/chromium_headless_shell-<revision>/…, then Please run the following command to download new browsers: npx playwright install. npm ci does not download browsers. The revision in that path belongs to one @playwright/test version.",
+          "OS libraries: Host system is missing dependencies to run browsers, often with libnss3 or libnspr4. npx playwright install downloads binaries only. The CI command that installs both is npx playwright install --with-deps. The log may also say npx playwright install-deps.",
+          "Headed on a headless runner: headless is the default. headless: false or --headed on ubuntu-latest dies with no display. The log says you launched a headed browser without a XServer, or Missing X server or $DISPLAY. Use headless in CI, or prefix the command with xvfb-run.",
+          "Timeout: Test timeout of 30000ms exceeded, page.goto: Timeout 30000ms exceeded, or Error: Timed out waiting 60000ms from config.webServer. The app, webServer, or a networkidle wait did not finish. A hung HTML report (CI unset, so the reporter keeps serving) waits until the job limit.",
+          "Assertion: Error: expect(locator).toHaveText(expected) failed, with Expected / Received, or a strict mode violation because a locator matched two elements. The browser did launch. Open that spec and line.",
+          "Flake: retries (the scaffold sets retries: process.env.CI ? 2 : 0) turn a recovered failure into 1 flaky, and the job can still exit 0. A red job prints 1 failed after the last attempt. Read the last attempt. The first attempt is the flake, not always the cause of the red job.",
+          "Screenshot: Error: A snapshot doesn't exist at …-linux.png, writing actual, or a toHaveScreenshot pixel diff. Baselines are per OS. A darwin or win32 snapshot does not satisfy ubuntu-latest. Update snapshots on the same runner or image, then commit the linux file.",
+          "Artifacts: the error block names a screenshot and a trace.zip, plus npx playwright show-trace. Those files live under test-results/ and the HTML report under playwright-report/. They are deleted with the runner unless you upload them.",
+        ],
+        code: {
+          label: "Playwright test failure log excerpt",
+          content: `Running 12 tests using 1 worker
+
+  ✘  1 [chromium] › e2e/checkout.spec.ts:18:3 › Checkout › applies summer coupon (5.2s)
+
+  1) [chromium] › e2e/checkout.spec.ts:18:3 › Checkout › applies summer coupon
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  getByTestId('total')
+    Expected: "18"
+    Received: "20"
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveText" with timeout 5000ms
+      - waiting for getByTestId('total')
+
+      20 |   await page.getByRole('button', { name: 'Apply' }).click();
+      21 |   await expect(page.getByTestId('total')).toHaveText('18');
+         |                                            ^
+      22 | });
+
+    attachment #1: screenshot (image/png)
+    test-results/checkout-Checkout-applies-summer-coupon-chromium/test-failed-1.png
+
+    attachment #2: trace (application/zip)
+    test-results/checkout-Checkout-applies-summer-coupon-chromium/trace.zip
+    Usage:
+        npx playwright show-trace test-results/checkout-Checkout-applies-summer-coupon-chromium/trace.zip
+
+  1 failed
+    [chromium] › e2e/checkout.spec.ts:18:3 › Checkout › applies summer coupon
+  11 passed (18.4s)
+##[error]Process completed with exit code 1`,
+        },
+      },
+      {
+        heading: "Browser install, system deps, and version mismatch",
+        paragraphs: [
+          "A broken install and a failing assertion look the same in the Checks UI: a red job and exit code 1. They are not the same failure. npm error `npm ci` can only install…, Cannot find module '@playwright/test', or playwright: not found means the runner never graded your suite. Executable doesn't exist and Host system is missing dependencies mean the package installed and the browser launch did not. If both appear in one paste, rank the earlier step first.",
+          "Run the installer from the project after npm ci so the CLI matches @playwright/test. npx playwright install before npm ci uses whatever version npx fetches, which can disagree with package.json, and the next test step then looks for a different chromium_headless_shell-<revision> folder. A container job that uses mcr.microsoft.com/playwright has to pin that image tag to the same version as @playwright/test. The image already contains browsers, so the sample skips npx playwright install — a mismatched tag still fails with Executable doesn't exist. Error: Failed to launch browser is the same family; DEBUG=pw:browser npx playwright test prints the launch line.",
+        ],
+        list: [
+          "Lockfile: npm error `npm ci` can only install… / Cannot find module '@playwright/test' / playwright: not found. Commit package.json and the lockfile together, then re-run npm ci.",
+          "Browsers: after npm ci, npx playwright install --with-deps. Install alone does not apt-get the libraries Chromium needs on ubuntu-latest.",
+          "Version: the revision in the Executable doesn't exist path must belong to the installed @playwright/test. Do not cache ~/.cache/ms-playwright unless the key includes that version. Playwright's CI docs say browser caching is not worth it.",
+          "Docker: match the mcr.microsoft.com/playwright tag to @playwright/test. Do not mix an image built for one version with a package.json on another.",
+        ],
+        code: {
+          label: "Same exit code, three different first errors",
+          content: `# Lockfile — Playwright never ran
+npm error \`npm ci\` can only install packages when your
+package.json and package-lock.json are in sync.
+Cannot find module '@playwright/test'
+Error: Process completed with exit code 1
+
+# Browsers missing or wrong revision — tests never launched
+Error: browserType.launch: Executable doesn't exist at /home/runner/.cache/ms-playwright/chromium_headless_shell-1169/chrome-linux/headless_shell
+Looks like Playwright Test or Playwright was just installed or updated.
+Please run the following command to download new browsers:
+    npx playwright install
+##[error]Process completed with exit code 1
+
+# Binaries present, OS libraries missing
+Error: browserType.launch: Host system is missing dependencies to run browsers.
+Please install them with the following command:
+    npx playwright install-deps
+Missing libraries: libnss3.so, libnspr4.so
+##[error]Process completed with exit code 1`,
+        },
+      },
+      {
+        heading: "Reproduce with the same CI command",
+        paragraphs: [
+          "A laptop with a display, a headed browser, and darwin screenshots is not the CI gate. Match the runner: same Node as actions/setup-node, a frozen lockfile install, then the browser install, then the exact Playwright command. The three steps on the Playwright CI page are npm ci, npx playwright install --with-deps, and npx playwright test.",
+          "GitHub Actions sets CI, so the HTML reporter writes playwright-report/ and exits. A local shell without CI set can sit on Serving HTML report until you interrupt it — that is not a test failure. Pass the same --project and --workers the workflow used. For one spec: npx playwright test e2e/checkout.spec.ts. Headed locally is fine; on the runner, drop --headed or wrap the command in xvfb-run. Upload playwright-report/ with actions/upload-artifact when the job is not cancelled, and upload test-results/ if you need the raw screenshot and trace.zip after the runner is gone.",
+        ],
+        list: [
+          "Node: nvm use (or fnm) to the version in setup-node. Confirm with node -v.",
+          "Install: npm ci, then npx playwright install --with-deps. Do not reuse a laptop browser cache.",
+          "Test: CI=true npx playwright test. One file: CI=true npx playwright test e2e/checkout.spec.ts --project=chromium. Headed on Linux: xvfb-run npx playwright test.",
+          "Traces: npx playwright show-trace test-results/.../trace.zip after you download the artifact. The path in the log is not on your laptop until you do.",
+        ],
+        code: {
+          label: "Same commands the runner used",
+          content: `npm ci
+npx playwright install --with-deps
+CI=true npx playwright test
+# one spec, same project CI used:
+CI=true npx playwright test e2e/checkout.spec.ts --project=chromium
+# headed only when the runner has Xvfb:
+xvfb-run npx playwright test`,
+        },
+      },
+      {
+        heading: "Paste the log when the first error is still unclear",
+        paragraphs: [
+          "If the log is long or the first error is buried under browser download noise, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
+        ],
+        links: [
+          { href: "/analyze", label: "Paste a log on CauseCI" },
+          {
+            href: ACTION_INSTALL_PATH,
+            label: "Optional: install the failure-teaser Action",
+          },
+          { href: "/guides", label: "All CI failure guides" },
+          {
+            href: "/guides/vitest-failed-github-actions",
+            label: "Vitest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/jest-failed-github-actions",
+            label: "Jest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/npm-test-failed-github-actions",
+            label: "npm test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/typescript-failed-github-actions",
+            label: "TypeScript / tsc failed in GitHub Actions",
+          },
+          {
+            href: "/guides/eslint-failed-github-actions",
+            label: "ESLint failed in GitHub Actions",
+          },
+          {
+            href: "/guides/pytest-failed-github-actions",
+            label: "pytest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/explain-github-actions-failure",
+            label: "Explain this GitHub Actions failure",
+          },
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: "Why does GitHub say Process completed with exit code 1 after Playwright?",
+        answer:
+          "That line is a wrapper. The phrase playwright Process completed with exit code 1 is the wrapper, not the diagnosis. Scroll up to the first Error:, browserType.launch, Executable doesn't exist, Test timeout of, or ##[error] — that is the cause.",
+      },
+      {
+        question: "How do I tell a browser install failure from a real Playwright test failure?",
+        answer:
+          "If npm ci is red, or the log prints Cannot find module '@playwright/test' / playwright: not found, Playwright never graded your suite. Executable doesn't exist or Host system is missing dependencies means the package installed and the browser never launched — run npx playwright install --with-deps after npm ci. A real playwright test failed CI log shows Running N tests, a ✘ line, Error: expect(...) or a timeout, and 1 failed after the browser started.",
+      },
+      {
+        question: "Why do Playwright tests pass locally and fail in GitHub Actions?",
+        answer:
+          "The laptop usually has browsers, a display, and darwin or win32 screenshots. ubuntu-latest needs npx playwright install --with-deps, stays headless unless you add xvfb-run, and looks for -linux.png snapshots. A Docker image tag that does not match @playwright/test, or a browser cache from another version, fails with Executable doesn't exist. Timeouts and flakes also show up when workers is higher than the runner can hold — the CI docs recommend workers: 1.",
+      },
+      {
+        question: "Do I need to install a GitHub Action to explain playwright failed GitHub Actions?",
+        answer:
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+      },
+    ],
+  },
+  {
     slug: ACTION_INSTALL_SLUG,
     path: ACTION_INSTALL_PATH,
     title: "Install the CauseCI GitHub Action",
