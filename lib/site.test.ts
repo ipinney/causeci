@@ -37,6 +37,7 @@ describe("public SEO routes", () => {
       "/guides/pytest-failed-github-actions",
       "/guides/jest-failed-github-actions",
       "/guides/vitest-failed-github-actions",
+      "/guides/playwright-failed-github-actions",
       ACTION_INSTALL_PATH,
     ]);
     expect(paths.some((path) => path.startsWith("/jobs"))).toBe(false);
@@ -58,7 +59,7 @@ describe("public SEO routes", () => {
   });
 
   it("keeps each guide useful: lede, sections, CTA-related FAQ, and a paste path", () => {
-    expect(GUIDES).toHaveLength(10);
+    expect(GUIDES).toHaveLength(11);
     expect(new Set(GUIDES.map((guide) => guide.slug)).size).toBe(GUIDES.length);
     expect(new Set(GUIDES.map((guide) => guide.path)).size).toBe(GUIDES.length);
     for (const guide of GUIDES) {
@@ -373,5 +374,82 @@ describe("public SEO routes", () => {
       ]),
     );
     expect(related).not.toContain("vitest-failed-github-actions");
+  });
+
+  it("documents Playwright vs browser install for GitHub Actions", () => {
+    const guide = getGuide("playwright-failed-github-actions");
+    expect(guide).toBeDefined();
+    expect(guide?.path).toBe("/guides/playwright-failed-github-actions");
+    expect(guide?.updatedAt).toBe("2026-09-25");
+    expect(guide?.keywords).toEqual(
+      expect.arrayContaining([
+        "playwright failed GitHub Actions",
+        "playwright test failed CI",
+        "playwright Process completed with exit code 1",
+        "Process completed with exit code 1",
+        "npx playwright test failed",
+      ]),
+    );
+    const body = [
+      guide?.lede,
+      ...(guide?.sections.flatMap((section) => [
+        ...section.paragraphs,
+        ...(section.list ?? []),
+        section.code?.content ?? "",
+      ]) ?? []),
+      ...(guide?.faqs.map((faq) => `${faq.question} ${faq.answer}`) ?? []),
+    ].join("\n");
+    expect(body).toMatch(/npx playwright test/);
+    expect(body).toMatch(/npx playwright install --with-deps/);
+    expect(body).toMatch(/Executable doesn't exist/);
+    expect(body).toMatch(/Host system is missing dependencies/);
+    expect(body).toMatch(/browserType\.launch/);
+    expect(body).toMatch(/headless/);
+    expect(body).toMatch(/xvfb-run/);
+    expect(body).toMatch(/Test timeout of 30000ms exceeded/);
+    expect(body).toMatch(/webServer/);
+    expect(body).toMatch(/flaky/);
+    expect(body).toMatch(/trace\.zip/);
+    expect(body).toMatch(/playwright-report/);
+    expect(body).toMatch(/toHaveScreenshot|snapshot doesn't exist/);
+    expect(body).toMatch(/linux\.png/);
+    expect(body).toMatch(/@playwright\/test/);
+    expect(body).toMatch(/npm ci/);
+    expect(body).toContain("Process completed with exit code 1");
+    expect(body).toContain("/analyze");
+    expect(body).toContain("/guides");
+    expect(body).toContain(ACTION_INSTALL_PATH);
+    expect(body).toContain("ipinney/causeci/action@main");
+    expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
+    expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
+    const links = guide?.sections.flatMap((section) => section.links ?? []) ?? [];
+    expect(links.some((link) => link.href === "/analyze")).toBe(true);
+    expect(links.some((link) => link.href === ACTION_INSTALL_PATH)).toBe(true);
+    expect(links.some((link) => link.href === "/guides")).toBe(true);
+    for (const href of [
+      "/guides/vitest-failed-github-actions",
+      "/guides/jest-failed-github-actions",
+      "/guides/npm-test-failed-github-actions",
+      "/guides/typescript-failed-github-actions",
+      "/guides/eslint-failed-github-actions",
+      "/guides/pytest-failed-github-actions",
+      "/guides/explain-github-actions-failure",
+    ]) {
+      expect(links.some((link) => link.href === href)).toBe(true);
+    }
+    const related = otherGuides("playwright-failed-github-actions").map((item) => item.slug);
+    expect(related).toEqual(
+      expect.arrayContaining([
+        "vitest-failed-github-actions",
+        "jest-failed-github-actions",
+        "npm-test-failed-github-actions",
+        "typescript-failed-github-actions",
+        "eslint-failed-github-actions",
+        "pytest-failed-github-actions",
+        "install-github-action-failure-teaser",
+        "explain-github-actions-failure",
+      ]),
+    );
+    expect(related).not.toContain("playwright-failed-github-actions");
   });
 });
