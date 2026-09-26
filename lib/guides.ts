@@ -1226,6 +1226,220 @@ xvfb-run npx playwright test`,
     ],
   },
   {
+    slug: "cypress-failed-github-actions",
+    path: "/guides/cypress-failed-github-actions",
+    title: "Cypress failed in GitHub Actions",
+    description:
+      "How to read a red Cypress / npx cypress run step in GitHub Actions: distinguish a missing binary, a version mismatch, or a Cypress Cloud record failure from a real e2e failure, and ignore Process completed with exit code 1.",
+    eyebrow: "Cypress · npx cypress run · binary",
+    lede:
+      "When Cypress fails in GitHub Actions, the last line is almost always Process completed with exit code 1. That is a wrapper. The cause is the first real error — a missing Cypress binary, a version mismatch, a headed launch with no display, a baseUrl the runner cannot reach, a timeout, or a failed e2e assertion.",
+    keywords: [
+      "cypress failed GitHub Actions",
+      "cypress run failed CI",
+      "cypress Process completed with exit code 1",
+      "Process completed with exit code 1",
+      "npx cypress run failed",
+    ],
+    updatedAt: "2026-09-26",
+    sections: [
+      {
+        heading: "Start at the first error, not exit code 1",
+        paragraphs: [
+          "A red npx cypress run step almost always ends with Process completed with exit code 1. Ignore that wrapper line. It only means the process died. Scroll up in the failing step to the first CypressError, AssertionError, The cypress npm package is installed, but the Cypress binary is missing, Cypress could not verify that this server is running, or ##[error]. That sentence is the diagnosis you are trying to name.",
+          "Cypress does not print Jest's FAIL path or Test Suites: line, Vitest's RUN  v banner, or Playwright's Running N tests using M workers. A cypress run failed CI log starts with a version line, then Running: checkout.cy.js, then a numbered 1) failure and an AssertionError or CypressError. If you only see FAIL path, RUN  v, or [chromium] ›, you are looking at Jest, Vitest, or Playwright.",
+        ],
+        list: [
+          "Search the raw job log for CypressError, AssertionError, Timed out retrying after, The Cypress binary is missing, and ##[error].",
+          "Quote the first of those lines — do not paraphrase the wrapper Process completed with exit code 1.",
+          "If the first error is in an npm ci or install step, Cypress never ran. Treat that as lockfile or install drift.",
+        ],
+      },
+      {
+        heading: "Common Cypress CI failures",
+        paragraphs: [
+          "After the npm install succeeded and the binary launched, the first red block is one of a short list. Rank it in this order. A baseUrl the runner cannot reach, or a wait-on that never sees the app, fails before any spec body runs. A timeout, assertion, or flake fails after the browser started. The npm test guide covers whichever runner sits behind npm test; this page is the Cypress binary, baseUrl, and cypress run reporter.",
+          "cypress run is headless by default and uses the bundled Electron browser. cypress open is the interactive app — it waits for a person and will sit until the job limit if a workflow calls it. --headed, headed: true, or --browser chrome needs a display and, for Chrome, a browser that is actually installed. GitHub-hosted Ubuntu images already include Xvfb. A slim container, a self-hosted image, or act often does not, and the log says Your system is missing the dependency: Xvfb then Error: spawn Xvfb ENOENT. Since Cypress 13, video is false by default. A config that still sets video: true compresses every spec into cypress/videos during cypress run. Screenshots on failure still land in cypress/screenshots. Both folders are deleted with the runner unless you upload them.",
+        ],
+        list: [
+          "Flake: retries.runMode (often 2) reprints the spec as (Attempt 2 of 3). A recovered attempt can still exit 0. A red job is the last attempt. Read that one. The first attempt is the flake, not always the cause of the red job.",
+          "Timeout: Timed out retrying after 4000ms, a cy.wait() that never saw the route, or a start/wait-on line Timed out waiting for: http://localhost:3000. The app, an intercept, or defaultCommandTimeout did not finish. A hung cypress open waits until the job limit.",
+          "Assertion: AssertionError: Timed out retrying after 4000ms: expected '<span.total>' to have text '18', but the text was '20'. The browser did launch. Open that spec.",
+          "baseUrl / env: Cypress could not verify that this server is running, then the URL from baseUrl. CYPRESS_BASE_URL overrides the config value, so a workflow env on port 3000 and a Vite app on 5173 never meet. cypress.env.json is gitignored by the Cypress scaffold, so Cypress.env('API_URL') that works on a laptop is undefined on the runner. Fork pull requests also drop repository secrets.",
+          "Headed vs headless: leave CI on cypress run, which is headless. --headed on a machine without Xvfb dies with Your system is missing the dependency: Xvfb. Electron ships inside the Cypress binary. Chrome does not — cypress-io/github-action installs it when browser: chrome is set. A bare npx cypress run --browser chrome fails when Chrome is not on the image.",
+          "Video / screenshots: the summary names a path under cypress/screenshots/… (failed).png. With video: true it also writes cypress/videos/<spec>.mp4. Upload both with actions/upload-artifact and if-no-files-found: ignore. A video-compression warning does not change the spec's exit code — do not rank it above the assertion.",
+        ],
+        code: {
+          label: "Cypress run failure log excerpt",
+          content: `Cypress package version: 13.17.0
+Cypress binary version: 13.17.0
+
+Running:  checkout.cy.js                                                              (1 of 3)
+
+  Checkout
+    1) applies summer coupon
+
+  0 passing (5s)
+  1 failing
+
+  1) Checkout
+       applies summer coupon:
+     AssertionError: Timed out retrying after 4000ms: expected '<span.total>' to have text '18', but the text was '20'
+      + expected - actual
+
+      -'20'
+      +'18'
+
+      at Context.eval (webpack://app/./cypress/e2e/checkout.cy.js:21:42)
+
+  (Screenshots)
+
+  -  /home/runner/work/app/app/cypress/screenshots/checkout.cy.js/Checkout -- applies summer coupon (failed).png
+
+  (Results)
+
+  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ Tests:        3                                                                                │
+  │ Passing:      2                                                                                │
+  │ Failing:      1                                                                                │
+  │ Screenshots:  1                                                                                │
+  │ Video:        false                                                                            │
+  │ Spec Ran:     checkout.cy.js                                                                   │
+  └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+##[error]Process completed with exit code 1`,
+        },
+      },
+      {
+        heading: "Binary install, version mismatch, and Cypress Cloud",
+        paragraphs: [
+          "A broken install and a failing assertion look the same in the Checks UI: a red job and exit code 1. They are not the same failure. npm error \`npm ci\` can only install…, or Cannot find module 'cypress', means the runner never graded your suite. The cypress npm package is installed, but the Cypress binary is missing means the package installed and the binary at ~/.cache/Cypress/<version>/Cypress/Cypress did not. npm ci does not guarantee that path if the postinstall was skipped, if CYPRESS_INSTALL_BINARY=0 was set, or if the cache restored node_modules and not ~/.cache/Cypress. If both an install error and a spec failure appear in one paste, rank the earlier step first.",
+          "The binary version has to match the cypress package. npx cypress version prints both. A cache or a CYPRESS_INSTALL_BINARY pin from another release warns Binary version 13.7.1 does not match the expected package version 13.7.0 and These versions may not work properly together. A cypress/included image has to use the same tag as the cypress dependency — latest against an older package.json looks in a different cache folder. cypress/browsers has OS libraries and browsers, not your project's Cypress binary. pnpm's side-effects cache can skip the postinstall when the package is already in the store, so run npx cypress install after install, or turn that cache off.",
+          "Cypress Cloud is optional. cypress run without --record stays on the runner and never needs a record key. --record sends the run to Cypress Cloud and requires CYPRESS_RECORD_KEY as a real environment variable — not a key inside cypress.env.json, and not the env block in cypress.config, because those only feed Cypress.env() inside tests. The log then says You passed the --record flag but did not provide us your Record Key. --parallel only works with --record, so a missing key fails before any spec is load-balanced. Fork pull requests do not receive repository secrets, so a job that always passes --record goes red on forks even when the specs would pass. Pass GITHUB_TOKEN into cypress-io/github-action when you record, so a re-run is a new build. A hand-rolled --ci-build-id has to be the same across the matrix and has to change with github.run_attempt.",
+        ],
+        list: [
+          "Lockfile: npm error \`npm ci\` can only install… / Cannot find module 'cypress' / cypress: not found. Commit package.json and the lockfile together, then re-run npm ci.",
+          "Binary: after npm ci, npx cypress install, then npx cypress verify. The expected path is ~/.cache/Cypress/<version>/Cypress/Cypress on a GitHub-hosted Linux runner. Cache that directory only when the key includes the cypress version.",
+          "Version: npx cypress version. The package line and the binary line should match. Do not pin CYPRESS_INSTALL_BINARY to a different version than the cypress dependency.",
+          "Cloud vs local: drop --record to reproduce a spec on the runner. Set CYPRESS_RECORD_KEY from the Actions secret only when you mean to record. Skip --record when the secret is empty.",
+        ],
+        code: {
+          label: "Same exit code, three different first errors",
+          content: `# Lockfile — Cypress never ran
+npm error \`npm ci\` can only install packages when your
+package.json and package-lock.json are in sync.
+Cannot find module 'cypress'
+Error: Process completed with exit code 1
+
+# Package present, binary missing — specs never launched
+The cypress npm package is installed, but the Cypress binary is missing.
+We expected the binary to be installed here: /home/runner/.cache/Cypress/13.17.0/Cypress/Cypress
+Reasons it may be missing:
+- You're caching 'node_modules' but are not caching this path: /home/runner/.cache/Cypress
+Alternatively, you can run 'cypress install' to download the binary again.
+##[error]Process completed with exit code 1
+
+# Cypress Cloud — specs may not have run
+You passed the --record flag but did not provide us your Record Key.
+You can also set the Record Key as the environment variable CYPRESS_RECORD_KEY.
+##[error]Process completed with exit code 1`,
+        },
+      },
+      {
+        heading: "Reproduce with the same CI command",
+        paragraphs: [
+          "A laptop with a display, a headed Electron window, and a gitignored cypress.env.json is not the CI gate. Match the runner: same Node as actions/setup-node, a frozen lockfile install, then the binary check, then the exact Cypress command. If the workflow uses cypress-io/github-action, also match its start, wait-on, and browser inputs. The app has to be listening on the same origin as baseUrl before cypress run.",
+          "GitHub Actions sets CI. cypress run exits when the specs finish. cypress open does not — it waits for the GUI. Pass the same --spec and --browser the workflow used. Headed locally is fine. On the runner, drop --headed unless Xvfb is installed. Omit --record unless you are debugging the Cloud key itself. Upload cypress/screenshots and, when video: true, cypress/videos with actions/upload-artifact if you need the files after the runner is gone.",
+        ],
+        list: [
+          "Node: nvm use (or fnm) to the version in setup-node. Confirm with node -v.",
+          "Install: npm ci, then npx cypress verify. Do not reuse a laptop binary cache from another version.",
+          "Test: CI=true npx cypress run. One spec: CI=true npx cypress run --spec cypress/e2e/checkout.cy.js. Headed on Linux only when Xvfb exists: xvfb-run npx cypress run --headed.",
+          "Server: start the app the way the workflow does, on the port baseUrl and wait-on use. CYPRESS_BASE_URL, if set, wins over cypress.config.",
+        ],
+        code: {
+          label: "Same commands the runner used",
+          content: `npm ci
+npx cypress verify
+CI=true npx cypress run
+# one spec, same browser CI used:
+CI=true npx cypress run --spec cypress/e2e/checkout.cy.js --browser electron
+# headed only when the runner has Xvfb:
+xvfb-run npx cypress run --headed`,
+        },
+      },
+      {
+        heading: "Paste the log when the first error is still unclear",
+        paragraphs: [
+          "If the log is long or the first error is buried under the binary download, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
+        ],
+        links: [
+          { href: "/analyze", label: "Paste a log on CauseCI" },
+          {
+            href: ACTION_INSTALL_PATH,
+            label: "Optional: install the failure-teaser Action",
+          },
+          { href: "/guides", label: "All CI failure guides" },
+          {
+            href: "/guides/playwright-failed-github-actions",
+            label: "Playwright failed in GitHub Actions",
+          },
+          {
+            href: "/guides/vitest-failed-github-actions",
+            label: "Vitest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/jest-failed-github-actions",
+            label: "Jest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/npm-test-failed-github-actions",
+            label: "npm test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/typescript-failed-github-actions",
+            label: "TypeScript / tsc failed in GitHub Actions",
+          },
+          {
+            href: "/guides/eslint-failed-github-actions",
+            label: "ESLint failed in GitHub Actions",
+          },
+          {
+            href: "/guides/pytest-failed-github-actions",
+            label: "pytest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/explain-github-actions-failure",
+            label: "Explain this GitHub Actions failure",
+          },
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: "Why does GitHub say Process completed with exit code 1 after Cypress?",
+        answer:
+          "That line is a wrapper. The phrase cypress Process completed with exit code 1 is the wrapper, not the diagnosis. Scroll up to the first CypressError, AssertionError, The Cypress binary is missing, Cypress could not verify that this server is running, or ##[error] — that is the cause.",
+      },
+      {
+        question: "How do I tell a Cypress binary install failure from a real e2e failure?",
+        answer:
+          "If npm ci is red, or the log prints Cannot find module 'cypress' / cypress: not found, Cypress never graded your suite. The cypress npm package is installed, but the Cypress binary is missing means the package installed and the binary never launched — run npx cypress install, then npx cypress verify, after npm ci. A real cypress run failed CI log shows Running: <spec>, a numbered failure, AssertionError or Timed out retrying after, and a screenshot path after the browser started.",
+      },
+      {
+        question: "Why do Cypress tests pass locally and fail in GitHub Actions?",
+        answer:
+          "The laptop usually has the binary, a display, cypress.env.json, and the app already running on baseUrl. ubuntu-latest needs the binary in ~/.cache/Cypress, stays headless unless Xvfb is present, and does not see a gitignored cypress.env.json. CYPRESS_BASE_URL or a wait-on port that does not match the started app fails before specs. A cypress/included tag that does not match the cypress package, or a binary cache from another version, fails with a missing binary or Binary version … does not match the expected package version. A workflow that always passes --record goes red on fork pull requests because CYPRESS_RECORD_KEY is not available.",
+      },
+      {
+        question: "Do I need to install a GitHub Action to explain cypress failed GitHub Actions?",
+        answer:
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+      },
+    ],
+  },
+  {
     slug: ACTION_INSTALL_SLUG,
     path: ACTION_INSTALL_PATH,
     title: "Install the CauseCI GitHub Action",
