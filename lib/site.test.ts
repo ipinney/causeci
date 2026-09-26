@@ -38,6 +38,7 @@ describe("public SEO routes", () => {
       "/guides/jest-failed-github-actions",
       "/guides/vitest-failed-github-actions",
       "/guides/playwright-failed-github-actions",
+      "/guides/cypress-failed-github-actions",
       ACTION_INSTALL_PATH,
     ]);
     expect(paths.some((path) => path.startsWith("/jobs"))).toBe(false);
@@ -59,7 +60,7 @@ describe("public SEO routes", () => {
   });
 
   it("keeps each guide useful: lede, sections, CTA-related FAQ, and a paste path", () => {
-    expect(GUIDES).toHaveLength(11);
+    expect(GUIDES).toHaveLength(12);
     expect(new Set(GUIDES.map((guide) => guide.slug)).size).toBe(GUIDES.length);
     expect(new Set(GUIDES.map((guide) => guide.path)).size).toBe(GUIDES.length);
     for (const guide of GUIDES) {
@@ -451,5 +452,86 @@ describe("public SEO routes", () => {
       ]),
     );
     expect(related).not.toContain("playwright-failed-github-actions");
+  });
+
+  it("documents Cypress vs binary install for GitHub Actions", () => {
+    const guide = getGuide("cypress-failed-github-actions");
+    expect(guide).toBeDefined();
+    expect(guide?.path).toBe("/guides/cypress-failed-github-actions");
+    expect(guide?.updatedAt).toBe("2026-09-26");
+    expect(guide?.keywords).toEqual(
+      expect.arrayContaining([
+        "cypress failed GitHub Actions",
+        "cypress run failed CI",
+        "cypress Process completed with exit code 1",
+        "Process completed with exit code 1",
+        "npx cypress run failed",
+      ]),
+    );
+    const body = [
+      guide?.lede,
+      ...(guide?.sections.flatMap((section) => [
+        ...section.paragraphs,
+        ...(section.list ?? []),
+        section.code?.content ?? "",
+      ]) ?? []),
+      ...(guide?.faqs.map((faq) => `${faq.question} ${faq.answer}`) ?? []),
+    ].join("\n");
+    expect(body).toMatch(/npx cypress run/);
+    expect(body).toMatch(/The cypress npm package is installed, but the Cypress binary is missing/);
+    expect(body).toMatch(/cypress install/);
+    expect(body).toMatch(/does not match the expected package version/);
+    expect(body).toMatch(/Cypress could not verify that this server is running/);
+    expect(body).toMatch(/CYPRESS_BASE_URL/);
+    expect(body).toMatch(/Timed out retrying after 4000ms/);
+    expect(body).toMatch(/Your system is missing the dependency: Xvfb/);
+    expect(body).toMatch(/cypress\/screenshots/);
+    expect(body).toMatch(/cypress\/videos/);
+    expect(body).toMatch(/video: true/);
+    expect(body).toMatch(/CYPRESS_RECORD_KEY/);
+    expect(body).toMatch(/--record/);
+    expect(body).toMatch(/--parallel/);
+    expect(body).toMatch(/headed/);
+    expect(body).toMatch(/retries\.runMode/);
+    expect(body).toMatch(/\(Attempt 2 of 3\)/);
+    expect(body).toMatch(/npm ci/);
+    expect(body).toContain("Process completed with exit code 1");
+    expect(body).toContain("/analyze");
+    expect(body).toContain("/guides");
+    expect(body).toContain(ACTION_INSTALL_PATH);
+    expect(body).toContain("ipinney/causeci/action@main");
+    expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
+    expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
+    const links = guide?.sections.flatMap((section) => section.links ?? []) ?? [];
+    expect(links.some((link) => link.href === "/analyze")).toBe(true);
+    expect(links.some((link) => link.href === ACTION_INSTALL_PATH)).toBe(true);
+    expect(links.some((link) => link.href === "/guides")).toBe(true);
+    for (const href of [
+      "/guides/playwright-failed-github-actions",
+      "/guides/vitest-failed-github-actions",
+      "/guides/jest-failed-github-actions",
+      "/guides/npm-test-failed-github-actions",
+      "/guides/typescript-failed-github-actions",
+      "/guides/eslint-failed-github-actions",
+      "/guides/pytest-failed-github-actions",
+      "/guides/explain-github-actions-failure",
+    ]) {
+      expect(links.some((link) => link.href === href)).toBe(true);
+    }
+    const related = otherGuides("cypress-failed-github-actions").map((item) => item.slug);
+    expect(related).toEqual(
+      expect.arrayContaining([
+        "playwright-failed-github-actions",
+        "vitest-failed-github-actions",
+        "jest-failed-github-actions",
+        "npm-test-failed-github-actions",
+        "typescript-failed-github-actions",
+        "eslint-failed-github-actions",
+        "pytest-failed-github-actions",
+        "install-github-action-failure-teaser",
+        "explain-github-actions-failure",
+      ]),
+    );
+    expect(related).not.toContain("cypress-failed-github-actions");
   });
 });
