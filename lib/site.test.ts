@@ -39,6 +39,7 @@ describe("public SEO routes", () => {
       "/guides/vitest-failed-github-actions",
       "/guides/playwright-failed-github-actions",
       "/guides/cypress-failed-github-actions",
+      "/guides/go-test-failed-github-actions",
       ACTION_INSTALL_PATH,
     ]);
     expect(paths.some((path) => path.startsWith("/jobs"))).toBe(false);
@@ -60,7 +61,7 @@ describe("public SEO routes", () => {
   });
 
   it("keeps each guide useful: lede, sections, CTA-related FAQ, and a paste path", () => {
-    expect(GUIDES).toHaveLength(12);
+    expect(GUIDES).toHaveLength(13);
     expect(new Set(GUIDES.map((guide) => guide.slug)).size).toBe(GUIDES.length);
     expect(new Set(GUIDES.map((guide) => guide.path)).size).toBe(GUIDES.length);
     for (const guide of GUIDES) {
@@ -533,5 +534,87 @@ describe("public SEO routes", () => {
       ]),
     );
     expect(related).not.toContain("cypress-failed-github-actions");
+  });
+
+  it("documents go test vs module and build-constraint failures for GitHub Actions", () => {
+    const guide = getGuide("go-test-failed-github-actions");
+    expect(guide).toBeDefined();
+    expect(guide?.path).toBe("/guides/go-test-failed-github-actions");
+    expect(guide?.updatedAt).toBe("2026-09-27");
+    expect(guide?.keywords).toEqual(
+      expect.arrayContaining([
+        "go test failed GitHub Actions",
+        "go test Process completed with exit code 1",
+        "go test ./... failed CI",
+        "module cache / go.sum drift",
+        "build constraints",
+      ]),
+    );
+    const body = [
+      guide?.lede,
+      ...(guide?.sections.flatMap((section) => [
+        ...section.paragraphs,
+        ...(section.list ?? []),
+        section.code?.content ?? "",
+      ]) ?? []),
+      ...(guide?.faqs.map((faq) => `${faq.question} ${faq.answer}`) ?? []),
+    ].join("\n");
+    expect(body).toMatch(/go test \.\/\.\.\./);
+    expect(body).toMatch(/--- FAIL:/);
+    expect(body).toMatch(/\[build failed\]/);
+    expect(body).toMatch(/missing go\.sum entry/);
+    expect(body).toMatch(/inconsistent vendoring/);
+    expect(body).toMatch(/is not in std/);
+    expect(body).toMatch(/from \$GOROOT/);
+    expect(body).toMatch(/from \$GOPATH/);
+    expect(body).toMatch(/build constraints exclude all Go files/);
+    expect(body).toMatch(/GOTOOLCHAIN=local/);
+    expect(body).toMatch(/go: go\.mod requires go >=/);
+    expect(body).toMatch(/actions\/setup-go/);
+    expect(body).toMatch(/CGO_ENABLED/);
+    expect(body).toMatch(/-race requires cgo/);
+    expect(body).toMatch(/DATA RACE/);
+    expect(body).toMatch(/go mod tidy/);
+    expect(body).toContain("Process completed with exit code 1");
+    expect(body).toContain("/analyze");
+    expect(body).toContain("/guides");
+    expect(body).toContain(ACTION_INSTALL_PATH);
+    expect(body).toContain("ipinney/causeci/action@main");
+    expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
+    expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
+    const links = guide?.sections.flatMap((section) => section.links ?? []) ?? [];
+    expect(links.some((link) => link.href === "/analyze")).toBe(true);
+    expect(links.some((link) => link.href === ACTION_INSTALL_PATH)).toBe(true);
+    expect(links.some((link) => link.href === "/guides")).toBe(true);
+    for (const href of [
+      "/guides/cypress-failed-github-actions",
+      "/guides/playwright-failed-github-actions",
+      "/guides/vitest-failed-github-actions",
+      "/guides/jest-failed-github-actions",
+      "/guides/npm-test-failed-github-actions",
+      "/guides/typescript-failed-github-actions",
+      "/guides/eslint-failed-github-actions",
+      "/guides/pytest-failed-github-actions",
+      "/guides/explain-github-actions-failure",
+    ]) {
+      expect(links.some((link) => link.href === href)).toBe(true);
+    }
+    const related = otherGuides("go-test-failed-github-actions").map((item) => item.slug);
+    expect(related).toEqual(
+      expect.arrayContaining([
+        "cypress-failed-github-actions",
+        "playwright-failed-github-actions",
+        "vitest-failed-github-actions",
+        "jest-failed-github-actions",
+        "npm-test-failed-github-actions",
+        "typescript-failed-github-actions",
+        "eslint-failed-github-actions",
+        "pytest-failed-github-actions",
+        "install-github-action-failure-teaser",
+        "explain-github-actions-failure",
+      ]),
+    );
+    expect(related).not.toContain("go-test-failed-github-actions");
+    expect(GUIDES.at(-1)?.slug).toBe("install-github-action-failure-teaser");
   });
 });

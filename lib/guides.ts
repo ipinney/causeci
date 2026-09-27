@@ -1440,6 +1440,253 @@ xvfb-run npx cypress run --headed`,
     ],
   },
   {
+    slug: "go-test-failed-github-actions",
+    path: "/guides/go-test-failed-github-actions",
+    title: "Go test failed in GitHub Actions",
+    description:
+      "How to read a red go test / go test ./... step in GitHub Actions: distinguish a module, go.sum, cache, or setup-go install failure from a compile error, a real test FAIL, or a build tag / GOOS / GOARCH / CGO / race-detector issue, and ignore Process completed with exit code 1.",
+    eyebrow: "go test · go test ./... · module",
+    lede:
+      "When go test fails in GitHub Actions, the last line is almost always Process completed with exit code 1. That is a wrapper. The cause is the first real error — a missing go.sum entry, inconsistent vendoring, a module cache or setup-go miss, a compile error, a build constraint, or a real --- FAIL:.",
+    keywords: [
+      "go test failed GitHub Actions",
+      "go test Process completed with exit code 1",
+      "go test ./... failed CI",
+      "module cache / go.sum drift",
+      "build constraints",
+    ],
+    updatedAt: "2026-09-27",
+    sections: [
+      {
+        heading: "Start at the first error, not exit code 1",
+        paragraphs: [
+          "A red go test or go test ./... step almost always ends with Process completed with exit code 1. Ignore that wrapper line. It only means the process died. Scroll up in the failing step to the first --- FAIL:, FAIL:, [build failed], go: inconsistent vendoring, missing go.sum entry, package not in GOROOT/GOPATH, build constraints exclude all Go files, or ##[error]. That sentence is the diagnosis you are trying to name.",
+          "Go does not print Jest's FAIL path or Test Suites: line, Vitest's RUN  v banner, Playwright's Running N tests using M workers, or Cypress's Running: spec.cy.js. A go test ./... failed CI log prints one line per package — ok, FAIL, or ? — and, for a real test failure, --- FAIL: TestName plus the file:line the test printed. [build failed] means the package did not compile, so no test function ran. If you only see FAIL path, RUN  v, [chromium] ›, or AssertionError: Timed out retrying, you are looking at Jest, Vitest, Playwright, or Cypress.",
+        ],
+        list: [
+          "Search the raw job log for --- FAIL:, [build failed], missing go.sum entry, inconsistent vendoring, build constraints exclude all Go files, DATA RACE, and ##[error].",
+          "Quote the first of those lines — do not paraphrase the wrapper Process completed with exit code 1.",
+          "If the first error is in actions/setup-go, or the log stops at a go: line before any package result, go test never graded your suite. Treat that as a toolchain, module, or cache failure.",
+        ],
+      },
+      {
+        heading: "Common go test CI failures",
+        paragraphs: [
+          "After the module download succeeded and the packages compiled, the first red block is one of a short list. Rank it in this order. A compile error, a vet failure, or a build constraint fails before any Test function runs, and the package line says [build failed]. A --- FAIL: line, a timeout panic, or a DATA RACE fails after that package built. The pytest guide is the same split for Python; this page is the Go module, the package line, and the test name.",
+          "go test ./... walks every package under the module. A line that starts with ? and ends with [no test files] is not a failure — that package has no tests that match this GOOS, GOARCH, and -tags set. ok means the tests passed. FAIL without [build failed], followed by --- FAIL: TestName, is a test that ran and failed. The job exits 1 if any package fails. GitHub then appends Process completed with exit code 1. Read the first FAIL package, not the wrapper.",
+        ],
+        list: [
+          "Real test: --- FAIL: TestAppliesSummerCoupon (0.00s) and a file line such as coupon_test.go:21: total = 20, want 18, then FAIL github.com/acme/checkout/internal/billing. The package compiled. Open that test.",
+          "Compile: # github.com/acme/checkout/internal/billing then undefined: applyDiscount, then FAIL … [build failed]. No --- FAIL: TestName, because the test binary was never linked.",
+          "Vet: vet: … unreachable code, or a printf wrapper mismatch. go test runs go vet on the package before tests. It is a [build failed] gate, not an assertion.",
+          "Timeout: panic: test timed out after 10m0s and running tests: followed by the test name. The default limit is 10 minutes for the whole package. A later ok line does not erase it.",
+          "Race: WARNING: DATA RACE, then --- FAIL: and race detected during execution of test. The assertion may have passed. The detector is why the package is red.",
+          "Build tags / GOOS / GOARCH: build constraints exclude all Go files, or a linux-only file fails while the job sets GOOS=windows. The test body never ran.",
+          "CGO: cgo: C compiler \"gcc\" not found, or a missing header such as sqlite3.h. The race detector and many database drivers need cgo. ubuntu-latest has gcc; a distroless or alpine image often does not.",
+        ],
+        code: {
+          label: "Go test failure log excerpt",
+          content: `go test ./...
+?   	github.com/acme/checkout/cmd/checkout	[no test files]
+ok  	github.com/acme/checkout/internal/cart	0.008s
+=== RUN   TestAppliesSummerCoupon
+    coupon_test.go:21: total = 20, want 18
+--- FAIL: TestAppliesSummerCoupon (0.00s)
+FAIL
+FAIL	github.com/acme/checkout/internal/billing	0.012s
+FAIL
+##[error]Process completed with exit code 1`,
+        },
+      },
+      {
+        heading: "Module, go.sum, cache, and setup-go versus a real FAIL",
+        paragraphs: [
+          "A broken module download and a failing test look the same in the Checks UI: a red job and exit code 1. They are not the same failure. go: updates to go.sum needed, disabled by -mod=readonly, missing go.sum entry, verifying … checksum mismatch, go: inconsistent vendoring, or a package not in GOROOT/GOPATH means go test never graded that package. # path and [build failed] mean the module resolved and the compiler rejected the code. --- FAIL: TestName means a test ran. If an install error and a FAIL both appear in one paste, rank the earlier step first.",
+          "actions/setup-go installs the toolchain before your test step. A red setup-go step — Unable to find Go version, or a go-version-file that does not exist — means go test never started. The action sets GOTOOLCHAIN=local by default, so a go 1.23 line in go.mod does not download a newer toolchain when the action pinned 1.22. The test step then dies with go: go.mod requires go >= 1.23.0 (running go 1.22.5; GOTOOLCHAIN=local). That is a toolchain mismatch, not a test failure.",
+          "Module cache and go.sum drift are the other install family. setup-go with cache: true keys the module cache on go.sum. On a GitHub-hosted runner that cache is /home/runner/go/pkg/mod. A cache miss only slows the job. A go.mod that gained a requirement the committed go.sum does not list fails the download. As of Go 1.16, a go line of 1.14 or higher defaults to -mod=readonly when there is no vendor directory, so the runner will not rewrite go.sum for you. Run go mod tidy locally and commit go.mod and go.sum together. Do not hand-edit go.sum, and do not delete it to silence the error. If the repo vendors dependencies, go test uses that vendor directory, and a stale vendor/modules.txt fails with go: inconsistent vendoring before any test runs. Run go mod vendor and commit vendor/ with the module files. A checksum mismatch (verifying … checksum mismatch, then SECURITY ERROR) is not ordinary drift: the download does not match the sum already committed. Clear that module from the cache and download it again. If the sum still does not match, do not force go.sum to the new hash. A private module still fetched through proxy.golang.org fails with terminal prompts disabled — set GOPRIVATE for that path. Fork pull requests do not receive repository secrets, so a GOPROXY token that works on push is empty on a fork.",
+        ],
+        list: [
+          "setup-go: the setup step is red, or the first line is go: go.mod requires go >= …. Point go-version or go-version-file at the same version as the go line. GOTOOLCHAIN=local will not float upward.",
+          "go.sum: missing go.sum entry for go.mod file, often wrapped as go: updates to go.sum needed, disabled by -mod=readonly. The error suggests go mod download. Run go mod tidy and commit both files.",
+          "Cache: a module cache keyed only on go.mod (not go.sum) can restore a zip that no longer matches. Include go.sum in the key, or leave caching to setup-go. A miss is not a failure.",
+          "Vendor: go: inconsistent vendoring … To sync the vendor directory, run: go mod vendor. Commit the result. -mod=mod skips vendor and hides the drift until the next machine.",
+          "Not a module: package … is not in std (…/src/…) or cannot find package … (from $GOROOT) / (from $GOPATH). The job is outside the module, or GO111MODULE=off. Run from the directory that contains go.mod. go test ./... is not a GOPATH lookup.",
+          "Compile: [build failed] with undefined: or a type error. Fix the Go file. There is no TestName yet.",
+          "Test: --- FAIL: TestName after the package built. Re-run that package.",
+          "Constraints: build constraints exclude all Go files, a _linux.go file while GOOS=windows, or //go:build integration tests that CI compiled with -tags=integration and then failed. A tag that is missing usually omits the package ([no test files]) and stays green — that is a coverage gap, not this red job.",
+          "CGO and race: cgo: C compiler \"gcc\" not found, CGO_ENABLED=0 on a cgo file, or go: -race requires cgo; enable cgo by setting CGO_ENABLED=1. The race detector runs on linux/amd64 and linux/arm64 GitHub runners when gcc is installed. It is not a substitute for an assertion failure.",
+        ],
+        code: {
+          label: "Same exit code, different first errors",
+          content: `# Module / go.sum — tests never ran
+go: updates to go.sum needed, disabled by -mod=readonly:
+	github.com/stretchr/testify@v1.9.0: missing go.sum entry for go.mod file; to add it:
+	go mod download github.com/stretchr/testify
+##[error]Process completed with exit code 1
+
+# Vendoring — tests never ran
+go: inconsistent vendoring in /home/runner/work/checkout/checkout:
+	github.com/stretchr/testify@v1.9.0: is explicitly required in go.mod, but not marked as explicit in vendor/modules.txt
+
+	To ignore the vendor directory, use -mod=readonly or -mod=mod.
+	To sync the vendor directory, run:
+		go mod vendor
+##[error]Process completed with exit code 1
+
+# Toolchain — go test never started grading
+go: go.mod requires go >= 1.23.0 (running go 1.22.5; GOTOOLCHAIN=local)
+##[error]Process completed with exit code 1
+
+# Outside a module — package not in GOROOT (modules off, or no go.mod)
+package github.com/acme/checkout/internal/billing is not in std (/opt/hostedtoolcache/go/1.22.5/x64/src/github.com/acme/checkout/internal/billing)
+##[error]Process completed with exit code 1
+
+# Older GOPATH wording of the same miss
+cannot find package "github.com/acme/checkout/internal/billing" in any of:
+	/opt/hostedtoolcache/go/1.22.5/x64/src/github.com/acme/checkout/internal/billing (from $GOROOT)
+	/home/runner/go/src/github.com/acme/checkout/internal/billing (from $GOPATH)
+##[error]Process completed with exit code 1
+
+# Compile — no Test function ran
+# github.com/acme/checkout/internal/billing
+internal/billing/coupon.go:14:2: undefined: applyDiscount
+FAIL	github.com/acme/checkout/internal/billing [build failed]
+FAIL
+##[error]Process completed with exit code 1
+
+# Build constraints — files excluded for this GOOS/GOARCH/tags
+package github.com/acme/checkout/cmd/checkout
+	imports github.com/acme/checkout/internal/unix: build constraints exclude all Go files in /home/runner/work/checkout/checkout/internal/unix
+FAIL	github.com/acme/checkout/cmd/checkout [build failed]
+FAIL
+##[error]Process completed with exit code 1
+
+# CGO — compiler missing, tests never ran
+cgo: C compiler "gcc" not found: exec: "gcc": executable file not found in $PATH
+##[error]Process completed with exit code 1
+
+# Race detector without cgo — tests never ran
+go: -race requires cgo; enable cgo by setting CGO_ENABLED=1
+##[error]Process completed with exit code 1
+
+# Race detector — the test ran; the detector failed it
+WARNING: DATA RACE
+Read at 0x00c0001a4048 by goroutine 8:
+  github.com/acme/checkout/internal/cart.(*Cart).Total()
+      /home/runner/work/checkout/checkout/internal/cart/cart.go:42 +0x64
+--- FAIL: TestConcurrentAdd (0.05s)
+    race detected during execution of test
+FAIL
+##[error]Process completed with exit code 1`,
+        },
+      },
+      {
+        heading: "Reproduce with the same CI command",
+        paragraphs: [
+          "A laptop that already ran go mod tidy, has a warm module cache, and lets GOTOOLCHAIN download a newer Go is not the CI gate. Match the runner: same Go version as actions/setup-go (read it from the setup step, or from the go line when the workflow uses go-version-file: go.mod), GOTOOLCHAIN=local if CI sets that, then the exact go test arguments. If CI runs go test ./..., run that — not go test on one package after a local go get already rewrote go.mod.",
+          "Pass the same -tags, GOOS, GOARCH, CGO_ENABLED, and -race the workflow used. -count=1 avoids a cached PASS from a previous local run. One package, once the full ./... fails the same way: go test -count=1 ./internal/billing. For one test: go test -count=1 -run TestAppliesSummerCoupon ./internal/billing. If the workflow vendors, do not pass -mod=mod locally and then wonder why CI is the only red job.",
+        ],
+        list: [
+          "Go: install the version from setup-go. Confirm with go version. Export GOTOOLCHAIN=local when CI does.",
+          "Modules: go mod tidy, then commit go.mod and go.sum. If vendor/ is committed, go mod vendor and commit that too. Do not delete go.sum.",
+          "Test: go test ./... . One package: go test -count=1 ./internal/billing. One test: go test -count=1 -run '^TestAppliesSummerCoupon$' ./internal/billing.",
+          "Race and tags: CGO_ENABLED=1 go test -race ./... and go test -tags=integration ./... only when the workflow passes those flags. Set GOOS and GOARCH to the job's values before you compare.",
+        ],
+        code: {
+          label: "Same commands the runner used",
+          content: `go version
+GOTOOLCHAIN=local go test ./...
+# one package, no cached PASS:
+go test -count=1 ./internal/billing
+# one test:
+go test -count=1 -run '^TestAppliesSummerCoupon$' ./internal/billing
+# only if CI passed these:
+CGO_ENABLED=1 go test -race ./...
+go test -tags=integration ./...`,
+        },
+      },
+      {
+        heading: "Paste the log when the first error is still unclear",
+        paragraphs: [
+          "If the log is long or the first error is buried under module download noise, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
+        ],
+        links: [
+          { href: "/analyze", label: "Paste a log on CauseCI" },
+          {
+            href: ACTION_INSTALL_PATH,
+            label: "Optional: install the failure-teaser Action",
+          },
+          { href: "/guides", label: "All CI failure guides" },
+          {
+            href: "/guides/cypress-failed-github-actions",
+            label: "Cypress failed in GitHub Actions",
+          },
+          {
+            href: "/guides/playwright-failed-github-actions",
+            label: "Playwright failed in GitHub Actions",
+          },
+          {
+            href: "/guides/vitest-failed-github-actions",
+            label: "Vitest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/jest-failed-github-actions",
+            label: "Jest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/npm-test-failed-github-actions",
+            label: "npm test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/typescript-failed-github-actions",
+            label: "TypeScript / tsc failed in GitHub Actions",
+          },
+          {
+            href: "/guides/eslint-failed-github-actions",
+            label: "ESLint failed in GitHub Actions",
+          },
+          {
+            href: "/guides/pytest-failed-github-actions",
+            label: "pytest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/explain-github-actions-failure",
+            label: "Explain this GitHub Actions failure",
+          },
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: "Why does GitHub say Process completed with exit code 1 after go test?",
+        answer:
+          "That line is a wrapper. The phrase go test Process completed with exit code 1 is the wrapper, not the diagnosis. Scroll up to the first --- FAIL:, [build failed], missing go.sum entry, go: inconsistent vendoring, package not in GOROOT/GOPATH, build constraints exclude all Go files, or ##[error] — that is the cause.",
+      },
+      {
+        question:
+          "How do I tell a module, go.sum, cache, or setup-go failure from a compile error or a real test FAIL?",
+        answer:
+          "If actions/setup-go is red, or the log prints go: go.mod requires go >=, missing go.sum entry, checksum mismatch, go: inconsistent vendoring, or package … is not in std / (from $GOROOT) / (from $GOPATH), go test never graded your suite. [build failed] with no --- FAIL: TestName is a compile or vet error — the test binary did not run. A real go test ./... failed CI log shows --- FAIL: TestName and a file:line after that package compiled. build constraints exclude all Go files, a GOOS/GOARCH mismatch, cgo: C compiler \"gcc\" not found, and go: -race requires cgo are environment gates. WARNING: DATA RACE is a test that ran under -race and failed the detector.",
+      },
+      {
+        question: "Why do Go tests pass locally and fail in GitHub Actions?",
+        answer:
+          "The laptop often has a newer toolchain (GOTOOLCHAIN downloaded it), a warm module cache, a go.sum that was never committed, and CGO_ENABLED=1 with gcc on the PATH. ubuntu-latest uses the setup-go version with GOTOOLCHAIN=local, refuses to edit go.sum (-mod=readonly), and may cross-compile with GOOS/GOARCH or -tags the laptop did not set. A vendor directory that is stale only on CI fails with inconsistent vendoring. -race finds a DATA RACE the plain go test hid. Fork pull requests also drop secrets, so a private GOPROXY credential is empty.",
+      },
+      {
+        question: "What does FAIL [build failed] mean compared with --- FAIL:?",
+        answer:
+          "[build failed] on the package line means the compiler or vet stopped the package. No test function ran, so there is no --- FAIL: TestName. --- FAIL: TestAppliesSummerCoupon means the test binary started and that test failed. Fix the first one you see. A later package's FAIL can be a consequence of the first package not building.",
+      },
+      {
+        question: "Do I need to install a GitHub Action to explain go test failed GitHub Actions?",
+        answer:
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+      },
+    ],
+  },
+  {
     slug: ACTION_INSTALL_SLUG,
     path: ACTION_INSTALL_PATH,
     title: "Install the CauseCI GitHub Action",
