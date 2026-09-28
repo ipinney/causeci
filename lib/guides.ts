@@ -1687,6 +1687,280 @@ go test -tags=integration ./...`,
     ],
   },
   {
+    slug: "rust-test-failed-github-actions",
+    path: "/guides/rust-test-failed-github-actions",
+    title: "Rust cargo test failed in GitHub Actions",
+    description:
+      "How to read a red cargo test step in GitHub Actions: distinguish a Cargo.lock, registry, cache, or rustup / dtolnay / actions-rs toolchain failure from a compile error, and from a real test FAIL or panic, and ignore Process completed with exit code 101.",
+    eyebrow: "cargo test · Cargo.lock · rustup",
+    lede:
+      "When cargo test fails in GitHub Actions, the last line is almost always Process completed with exit code 101. Cargo's own error code is 101; a shell or an old actions-rs wrapper may print exit code 1 instead. Either line is a wrapper. The cause is the first real error — a lockfile or registry miss, a cache or toolchain (rustup, actions-rs, dtolnay) failure, a compile error, or a real test FAIL / panic.",
+    keywords: [
+      "cargo test failed GitHub Actions",
+      "cargo test Process completed with exit code 1",
+      "cargo test --locked failed CI",
+      "registry / Cargo.lock / cache drift",
+      "rustup / dtolnay toolchain",
+    ],
+    updatedAt: "2026-09-28",
+    sections: [
+      {
+        heading: "Start at the first error, not the exit code",
+        paragraphs: [
+          "A red cargo test step almost always ends with Process completed with exit code 101. Ignore that wrapper line. Cargo exits 101 when the command failed for any reason — a download, a compiler error, or a test. A workflow that shells through actions-rs/cargo, or a script that turns any failure into exit 1, prints Process completed with exit code 1 for the same death. Scroll up in the failing step to the first error: could not compile, error[E0425], failed to run custom build command, the lock file … --locked was passed, failed to get \`serde\`, rustup could not choose a version of cargo, or test result: FAILED. That sentence is the diagnosis you are trying to name.",
+          "Cargo does not print Jest's FAIL path or Test Suites: line, Vitest's RUN  v banner, Playwright's Running N tests using M workers, Cypress's Running: spec.cy.js, or Go's --- FAIL:. A cargo test --locked failed CI log prints running N tests, then test tests::name ... FAILED or ok, then test result: FAILED and error: test failed, to rerun pass \`--lib\`. A panic is inside that block: thread 'tests::…' panicked at, often assertion \`left == right\` failed. If the compiler stopped first, there is no running N tests line — only error: could not compile. If you only see FAIL path, RUN  v, [chromium] ›, AssertionError: Timed out retrying, or --- FAIL:, you are looking at Jest, Vitest, Playwright, Cypress, or Go.",
+        ],
+        list: [
+          "Search the raw job log for test result: FAILED, panicked at, error: could not compile, --locked was passed, failed to get \`, Unable to update registry, rustup could not choose a version, and ##[error].",
+          "Quote the first of those lines — do not paraphrase the wrapper Process completed with exit code 101 or exit code 1.",
+          "If the first error is in dtolnay/rust-toolchain or actions-rs/toolchain, or the log stops at a rustup or cargo fetch line before any running N tests, cargo test never graded your suite. Treat that as a toolchain, registry, lockfile, or cache failure.",
+        ],
+      },
+      {
+        heading: "Common cargo test CI failures",
+        paragraphs: [
+          "After the crates downloaded and the package compiled, the first red block is one of a short list. Rank it in this order. A compile error, a build-script failure, or a missing link library fails before any test function runs, and the log says could not compile with no test result: line. A test name ending in FAILED, a panicked at line, or test result: FAILED means that test ran. The Go guide is the same split for go test; this page is Cargo, the crate, and the test name.",
+          "cargo test --locked builds the tests, then runs them. A line that says test tests::hits_staging ... ignored is not a failure — that test is marked #[ignore] and this command did not pass -- --ignored. ok means it passed. FAILED, followed by a stdout section and panicked at, is a test that ran and failed. The job exits 101 if any test fails. GitHub then appends Process completed with exit code 101. Read the first FAILED test, not the wrapper. A later package in a workspace can fail because an earlier crate did not compile; fix the first error: could not compile.",
+        ],
+        list: [
+          "Real test: test tests::applies_summer_coupon ... FAILED, then thread 'tests::applies_summer_coupon' panicked at src/billing.rs:21:9: and assertion \`left == right\` failed with left: 20 and right: 18. The crate compiled. Open that test.",
+          "Panic: the same FAILED line for called \`Result::unwrap()\` on an \`Err\` value, or an explicit panic. It is still a test that ran. RUST_BACKTRACE=1 only prints the stack; it does not change the verdict.",
+          "should_panic: test tests::rejects_empty - should panic ... FAILED and note: test did not panic as expected. The test ran and the expected panic did not happen.",
+          "Compile: error[E0425]: cannot find function \`apply_discount\` in this scope, then error: could not compile \`checkout\` (lib test) due to 1 previous error. No running N tests, because the test binary was never linked.",
+          "Build script / link: error: failed to run custom build command for \`openssl-sys\`, or error: linking with \`cc\` failed: exit status: 1. The test body never ran. A missing system library is this class, not an assertion.",
+          "Doctest: test src/lib.rs - applies_summer_coupon (line 12) ... FAILED and error: doctest failed, to rerun pass \`--doc\`. That is a rustdoc example, not lib.rs unit tests.",
+        ],
+        code: {
+          label: "Cargo test failure log excerpt",
+          content: `cargo test --locked
+   Compiling checkout v0.1.0 (/home/runner/work/checkout/checkout)
+    Finished \`test\` profile [unoptimized + debuginfo] target(s) in 1.42s
+     Running unittests src/lib.rs (target/debug/deps/checkout-…)
+
+running 4 tests
+test tests::keeps_winter_rate ... ok
+test tests::applies_summer_coupon ... FAILED
+test tests::rejects_negative ... ok
+test tests::rounds_half_up ... ok
+
+failures:
+
+---- tests::applies_summer_coupon stdout ----
+
+thread 'tests::applies_summer_coupon' panicked at src/billing.rs:21:9:
+assertion \`left == right\` failed
+  left: 20
+  right: 18
+note: run with \`RUST_BACKTRACE=1\` environment variable to display a backtrace
+
+
+failures:
+    tests::applies_summer_coupon
+
+test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass \`--lib\`
+##[error]Process completed with exit code 101`,
+        },
+      },
+      {
+        heading: "Registry, lockfile, cache, and toolchain versus a compile error or a real FAIL",
+        paragraphs: [
+          "A broken download and a failing test look the same in the Checks UI: a red job and a non-zero exit. They are not the same failure. error: the lock file …/Cargo.lock needs to be updated but --locked was passed to prevent this, error: failed to select a version for the requirement, error: failed to get \`serde\` as a dependency, Unable to update registry \`crates-io\`, or error: checksum for \`serde v1.0.210\` changed between lock files means cargo test never graded that crate. error: could not compile and error[E0…] mean the crates resolved and rustc rejected the code. test result: FAILED and panicked at mean a test ran. If a fetch error and a FAILED both appear in one paste, rank the earlier step first.",
+          "The toolchain step installs rustc before your test step. dtolnay/rust-toolchain is the maintained install. actions-rs/toolchain and actions-rs/cargo are unmaintained; a red actions-rs step means cargo test never started — replace it with dtolnay/rust-toolchain and a plain run: cargo test --locked. The ref after @, or the toolchain input, selects the compiler. A rust-toolchain.toml channel is used when that input is omitted. If the workflow pins @stable and the file pins 1.81.0, the log's rustc --version is stable, not the file. A hand-rolled rustup default stable next to a file that pins another channel dies before any test with error: override toolchain '1.81.0-x86_64-unknown-linux-gnu' is not installed. No toolchain at all is error: rustup could not choose a version of cargo to run, because one wasn't specified explicitly, and no default is configured. A missing target is error: Error loading target specification: Could not find specification for target \"wasm32-unknown-unknown\". A rustfmt or clippy step that prints toolchain 'stable-x86_64-unknown-linux-gnu' does not have the binary \`rustfmt\` failed before cargo test. Those are toolchain failures, not test failures.",
+          "Registry, Cargo.lock, and cache drift are the other install family. CI should pass --locked so the runner cannot rewrite Cargo.lock the way a laptop's cargo test does. A dependency added in Cargo.toml and not committed in Cargo.lock fails with the lock file needs to be updated but --locked was passed to prevent this. Run cargo update -p <crate> or cargo generate-lockfile locally — usually cargo test once without --locked — and commit Cargo.lock with Cargo.toml. Do not delete Cargo.lock to silence the error. A vendor directory from cargo vendor, wired with [source.crates-io] replace-with, fails with error: no matching package named \`serde\` found and perhaps a crate was updated and forgotten to be re-vendored? Commit the vendor directory again. A checksum mismatch is not ordinary drift: the download does not match the sum already committed. Do not force the lockfile to the new hash until you know why the bytes changed. A private registry that needs CARGO_REGISTRIES_<NAME>_TOKEN fails the fetch on a fork pull request because that secret is empty. The log stops at failed to get / Unable to update registry before any running N tests.",
+          "Swatinem/rust-cache (or an actions/cache entry on ~/.cargo and target/) is not a failure when it misses — the job just downloads crates again. It keys the cache on the compiler and Cargo.lock. An actions/cache entry keyed only on Cargo.toml can restore crates the lockfile no longer lists, and --locked then refuses to update. A restored registry or target/ that cargo cannot read dies during the fetch or the compile, still with no test result: FAILED line. Bump the cache key or delete that cache and re-run. Do not treat a cache miss as the root cause of a panicked at.",
+        ],
+        list: [
+          "Toolchain: the dtolnay/rust-toolchain or actions-rs/toolchain step is red, or the first line is rustup could not choose a version of cargo / override toolchain … is not installed / does not have the binary \`rustfmt\`. Install the same channel as rust-toolchain.toml, including components and targets. Prefer dtolnay/rust-toolchain over actions-rs.",
+          "Cargo.lock: error: the lock file … needs to be updated but --locked was passed to prevent this. Commit Cargo.lock. Do not drop --locked on CI to hide it.",
+          "Registry: error: failed to get \`…\` as a dependency, Unable to update registry \`crates-io\`, or failed to download from \`https://index.crates.io/config.json\`. A network or index failure. Re-run once. A private registry 401 on a fork is a missing token, not a flaky test.",
+          "Vendor: perhaps a crate was updated and forgotten to be re-vendored? Run cargo vendor and commit vendor/ with the lockfile.",
+          "Checksum: error: checksum for \`serde v1.0.210\` changed between lock files. Do not rewrite the sum until the source of the bytes is known.",
+          "Cache: a miss is not a failure. A key that omits Cargo.lock or the rustc version restores the wrong crates or a stale target/. Fix the key. The test suite has not run yet.",
+          "Compile: error: could not compile \`checkout\` (lib test) with error[E0425] or another E0 code. Fix the Rust file. There is no test result: yet.",
+          "Build script: error: failed to run custom build command for a -sys crate, or error: linking with \`cc\` failed. Install the system library (pkg-config, libssl-dev, a C compiler) on the runner. The tests did not run.",
+          "Test: test result: FAILED, a tests::name ... FAILED line, and panicked at after the crate built. Re-run that test.",
+        ],
+        code: {
+          label: "Same exit code, different first errors",
+          content: `# Toolchain — cargo test never started
+error: rustup could not choose a version of cargo to run, because one wasn't specified explicitly, and no default is configured.
+help: run 'rustup default stable' to download the latest stable release of Rust and set it as your default toolchain.
+##[error]Process completed with exit code 1
+
+# rust-toolchain.toml override — tests never ran
+error: override toolchain '1.81.0-x86_64-unknown-linux-gnu' is not installed
+help: run \`rustup toolchain install 1.81.0-x86_64-unknown-linux-gnu\` to install it
+##[error]Process completed with exit code 1
+
+# Lockfile — tests never ran
+error: the lock file /home/runner/work/checkout/checkout/Cargo.lock needs to be updated but --locked was passed to prevent this
+If you want to try to generate the lock file without accessing the network, remove the --locked flag and use --offline instead.
+##[error]Process completed with exit code 101
+
+# Registry — tests never ran
+error: failed to get \`serde\` as a dependency of package \`checkout v0.1.0 (/home/runner/work/checkout/checkout)\`
+
+Caused by:
+  failed to load source for dependency \`serde\`
+
+Caused by:
+  Unable to update registry \`crates-io\`
+
+Caused by:
+  failed to download from \`https://index.crates.io/config.json\`
+##[error]Process completed with exit code 101
+
+# Vendor — tests never ran
+error: no matching package named \`serde\` found
+location searched: directory source \`/home/runner/work/checkout/checkout/vendor\` (which is replacing registry \`crates-io\`)
+required by package \`checkout v0.1.0 (/home/runner/work/checkout/checkout)\`
+perhaps a crate was updated and forgotten to be re-vendored?
+##[error]Process completed with exit code 101
+
+# Compile — no test function ran
+error[E0425]: cannot find function \`apply_discount\` in this scope
+ --> src/billing.rs:14:5
+  |
+14 |     apply_discount(total)
+  |     ^^^^^^^^^^^^^^ not found in this scope
+
+error: could not compile \`checkout\` (lib test) due to 1 previous error
+##[error]Process completed with exit code 101
+
+# Build script — tests never ran
+error: failed to run custom build command for \`openssl-sys v0.9.104\`
+
+Caused by:
+  process didn't exit successfully: \`…/build-script-build\` (exit status: 101)
+  --- stderr
+  Could not find directory of OpenSSL installation
+##[error]Process completed with exit code 101
+
+# Real test — the binary ran and panicked
+test tests::applies_summer_coupon ... FAILED
+thread 'tests::applies_summer_coupon' panicked at src/billing.rs:21:9:
+assertion \`left == right\` failed
+  left: 20
+  right: 18
+test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+error: test failed, to rerun pass \`--lib\`
+##[error]Process completed with exit code 101`,
+        },
+      },
+      {
+        heading: "Reproduce with the same CI command",
+        paragraphs: [
+          "A laptop that already ran cargo test without --locked, has a warm ~/.cargo, and lets rustup float to a newer stable is not the CI gate. Match the runner: the same toolchain the dtolnay/rust-toolchain step installed (read rustc --version from that step, or from rust-toolchain.toml when the workflow does not override it), then the exact cargo test arguments. If CI runs cargo test --locked --workspace, run that — not cargo test on one crate after a local cargo add already rewrote Cargo.lock.",
+          "Pass the same --features, --target, and RUSTFLAGS the workflow used. One test, once the full command fails the same way: cargo test --locked applies_summer_coupon -- --nocapture. The arguments after -- go to the test binary. -- --test-threads=1 avoids a second test interleaving with the panic you are reading. If the workflow vendors, do not delete .cargo/config.toml locally and then wonder why CI is the only red job.",
+        ],
+        list: [
+          "Toolchain: install the version from dtolnay/rust-toolchain. Confirm with rustc --version and rustup show. Add the same components and rustup target add values the workflow installs.",
+          "Lockfile: commit Cargo.lock. Reproduce the gate with cargo test --locked, not a bare cargo test that rewrites the file.",
+          "Test: cargo test --locked. One test: cargo test --locked applies_summer_coupon -- --nocapture. One integration test: cargo test --locked --test billing. Doctests: cargo test --locked --doc.",
+          "Features and target: cargo test --locked --features integration --target wasm32-unknown-unknown only when the workflow passes those flags. Export the same RUSTFLAGS.",
+        ],
+        code: {
+          label: "Same commands the runner used",
+          content: `rustc --version
+rustup show
+cargo test --locked
+# one test, with its println:
+cargo test --locked applies_summer_coupon -- --nocapture
+# one integration test:
+cargo test --locked --test billing
+# only if CI passed these:
+cargo test --locked --workspace --all-targets
+cargo test --locked --features integration`,
+        },
+      },
+      {
+        heading: "Paste the log when the first error is still unclear",
+        paragraphs: [
+          "If the log is long or the first error is buried under crate download noise, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
+        ],
+        links: [
+          { href: "/analyze", label: "Paste a log on CauseCI" },
+          {
+            href: ACTION_INSTALL_PATH,
+            label: "Optional: install the failure-teaser Action",
+          },
+          { href: "/guides", label: "All CI failure guides" },
+          {
+            href: "/guides/go-test-failed-github-actions",
+            label: "Go test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/cypress-failed-github-actions",
+            label: "Cypress failed in GitHub Actions",
+          },
+          {
+            href: "/guides/playwright-failed-github-actions",
+            label: "Playwright failed in GitHub Actions",
+          },
+          {
+            href: "/guides/vitest-failed-github-actions",
+            label: "Vitest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/jest-failed-github-actions",
+            label: "Jest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/npm-test-failed-github-actions",
+            label: "npm test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/typescript-failed-github-actions",
+            label: "TypeScript / tsc failed in GitHub Actions",
+          },
+          {
+            href: "/guides/eslint-failed-github-actions",
+            label: "ESLint failed in GitHub Actions",
+          },
+          {
+            href: "/guides/pytest-failed-github-actions",
+            label: "pytest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/explain-github-actions-failure",
+            label: "Explain this GitHub Actions failure",
+          },
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: "Why does GitHub say Process completed with exit code 101 after cargo test?",
+        answer:
+          "That line is a wrapper. Cargo exits 101 for every failure, so the phrase Process completed with exit code 101 is not the diagnosis. A shell or actions-rs/cargo wrapper may print Process completed with exit code 1 instead. Scroll up to the first test result: FAILED, panicked at, error: could not compile, --locked was passed, failed to get, or rustup error — that is the cause.",
+      },
+      {
+        question:
+          "How do I tell a cargo, registry, cache, or toolchain failure from a compile error or a real test FAIL?",
+        answer:
+          "If dtolnay/rust-toolchain or actions-rs/toolchain is red, or the log prints rustup could not choose a version of cargo, override toolchain … is not installed, or does not have the binary rustfmt, cargo test never graded your suite. the lock file … --locked was passed, failed to get, Unable to update registry, perhaps a crate was updated and forgotten to be re-vendored?, and checksum for … changed between lock files are registry, Cargo.lock, vendor, or cache failures — no test ran. error: could not compile and error[E0425], or error: failed to run custom build command, mean rustc or a build script stopped the crate. A real cargo test failure shows test tests::name ... FAILED, panicked at, and test result: FAILED after that crate compiled.",
+      },
+      {
+        question: "Why do Rust tests pass locally and fail in GitHub Actions?",
+        answer:
+          "The laptop often has a newer rustc (rustup updated stable), a warm ~/.cargo, and a Cargo.lock that was never committed. ubuntu-latest uses the dtolnay/rust-toolchain channel with --locked, so it will not rewrite the lockfile, and a rust-toolchain.toml channel the workflow overrode is a different compiler. A vendor directory that is stale only on CI fails with perhaps a crate was updated and forgotten to be re-vendored? A -sys crate that found OpenSSL on the laptop fails with failed to run custom build command when the runner image lacks the library. Fork pull requests also drop secrets, so a private registry token is empty.",
+      },
+      {
+        question: "What does could not compile mean compared with test result: FAILED?",
+        answer:
+          "error: could not compile \`checkout\` (lib test) means rustc stopped the crate. No test function ran, so there is no test result: line and no panicked at. test result: FAILED with thread 'tests::applies_summer_coupon' panicked at means the test binary started and that test failed. note: test did not panic as expected is a #[should_panic] test that ran and stayed calm. Fix the first one you see.",
+      },
+      {
+        question: "Do I need to install a GitHub Action to explain cargo test failed GitHub Actions?",
+        answer:
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+      },
+    ],
+  },
+  {
     slug: ACTION_INSTALL_SLUG,
     path: ACTION_INSTALL_PATH,
     title: "Install the CauseCI GitHub Action",
