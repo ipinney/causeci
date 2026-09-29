@@ -1961,6 +1961,265 @@ cargo test --locked --features integration`,
     ],
   },
   {
+    slug: "maven-test-failed-github-actions",
+    path: "/guides/maven-test-failed-github-actions",
+    title: "Maven / Surefire test failed in GitHub Actions",
+    description:
+      "How to read a red mvn test / Surefire step in GitHub Actions: distinguish a dependency, plugin, settings.xml, JDK, toolchain, or ~/.m2 cache failure from a compiler error and from a real Surefire <<< FAILURE!, and ignore Process completed with exit code 1.",
+    eyebrow: "mvn test · Surefire · JDK",
+    lede:
+      "When Maven test fails in GitHub Actions, the last line is almost always Process completed with exit code 1. That is a wrapper. The cause is the first real error — a dependency or plugin that did not resolve, a settings.xml 401, a JDK or toolchain mismatch, a bad ~/.m2 cache, a compilation error, or a real Surefire <<< FAILURE!.",
+    keywords: [
+      "maven test failed GitHub Actions",
+      "maven surefire Process completed with exit code 1",
+      "mvn test failed CI",
+      "settings.xml / dependency / cache drift",
+      "JDK / toolchain",
+    ],
+    updatedAt: "2026-09-29",
+    sections: [
+      {
+        heading: "Start at the first error, not exit code 1",
+        paragraphs: [
+          "A red mvn test or mvn verify step almost always ends with Process completed with exit code 1. Ignore that wrapper line. Maven exits 1 for every build failure — a download, a compiler error, or a test — and GitHub then prints the wrapper. Scroll up in the failing step to the first <<< FAILURE!, <<< ERROR!, There are test failures, COMPILATION ERROR, Could not resolve dependencies, Plugin … could not be resolved, status code: 401, release version … not supported, or Cannot find matching toolchain definitions. That sentence is the diagnosis you are trying to name.",
+          "Maven does not print Jest's FAIL path or Test Suites: line, Vitest's RUN  v banner, Playwright's Running N tests using M workers, Cypress's Running: spec.cy.js, Go's --- FAIL:, or Cargo's test result: FAILED. A real Surefire log prints T E S T S, then Running com.acme.checkout.BillingTest, then Tests run: N, Failures: 1 and <<< FAILURE! with the assertion under it. BUILD FAILURE and [Help 1] are the summary, not the cause. If you never see the T E S T S banner, Surefire did not grade the suite.",
+        ],
+        list: [
+          "Search the raw job log for <<< FAILURE!, <<< ERROR!, There are test failures, COMPILATION ERROR, Could not resolve dependencies, could not be resolved, status code: 401, Blocked mirror for repositories, release version, toolchains.xml, invalid LOC header, and ##[error].",
+          "Quote the first of those lines — do not paraphrase the wrapper Process completed with exit code 1, and do not stop at BUILD FAILURE.",
+          "If the first error is in actions/setup-java, or the log stops at a resolve, plugin, enforcer, or compiler line before T E S T S, mvn test never graded your suite. Treat that as a JDK, settings, dependency, plugin, or cache failure.",
+        ],
+      },
+      {
+        heading: "Common Surefire CI failures",
+        paragraphs: [
+          "After the reactor resolved its artifacts and the main and test sources compiled, the first red block is one of a short list. Rank it in this order. A compiler error fails in maven-compiler-plugin, before the T E S T S banner, and the line says COMPILATION ERROR or cannot find symbol. A <<< FAILURE! line, a <<< ERROR! line, or There are test failures means that test method ran (or its @BeforeEach / @BeforeAll did). The Go and Cargo guides are the same split for their runners; this page is Maven, the module, and the test method.",
+          "mvn -B test runs the surefire:test goal on each module that has tests. A module line in the reactor summary that says SKIPPED did not fail — an earlier module already failed and Maven stopped the reactor. FAILURE on a module is the pointer. Open that module's first error, which is above the summary. Tests run: 4, Failures: 1, Errors: 0 is an assertion. Errors: 1 with Failures: 0 is an unexpected exception, often in a lifecycle method. The job exits 1 either way. GitHub then appends Process completed with exit code 1. Read the first <<< FAILURE! or <<< ERROR!, not the wrapper.",
+        ],
+        list: [
+          "Real assertion: Tests run: 4, Failures: 1, Errors: 0, Skipped: 0 <<< FAILURE! -- in com.acme.checkout.BillingTest, then BillingTest.appliesSummerCoupon -- Time elapsed: 0.012 s <<< FAILURE! and org.opentest4j.AssertionFailedError: expected: <18> but was: <20>. The test class compiled. Open that method. JUnit 4 prints java.lang.AssertionError: expected:<18> but was:<20> for the same outcome.",
+          "Unexpected throw: <<< ERROR! and a stack that is not an assertion (NullPointerException, a failed assumption, an exception from @BeforeEach). The test runtime started. It is still a Surefire result, not a missing dependency.",
+          "No tests matched: Tests run: 0, Failures: 0, Errors: 0, Skipped: 0 and No tests were executed! or No tests matching pattern. The -Dtest= filter, the includes, or the JUnit Platform provider did not see a class. Nothing asserted.",
+          "Compile: COMPILATION ERROR, then cannot find symbol for applyDiscount, then Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin … compile. No T E S T S banner, because test classes were never run. testCompile is the same gate for src/test/java.",
+          "Fork crash: The forked VM terminated without properly saying goodbye. VM crash or System.exit called? Surefire started a JVM and it died. Look above that line for insufficient memory or a System.exit in a test. There is often no <<< FAILURE!.",
+          "Failsafe, if the goal is verify: the same There are test failures phrase from maven-failsafe-plugin, with reports under target/failsafe-reports. Read it the same way. It is not the unit-test goal.",
+        ],
+        code: {
+          label: "Surefire failure log excerpt",
+          content: `[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.acme.checkout.BillingTest
+[ERROR] Tests run: 4, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.042 s <<< FAILURE! -- in com.acme.checkout.BillingTest
+[ERROR] com.acme.checkout.BillingTest.appliesSummerCoupon -- Time elapsed: 0.012 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: expected: <18> but was: <20>
+	at com.acme.checkout.BillingTest.appliesSummerCoupon(BillingTest.java:21)
+
+[ERROR] Failures:
+[ERROR]   BillingTest.appliesSummerCoupon:21 expected: <18> but was: <20>
+[ERROR] Tests run: 4, Failures: 1, Errors: 0, Skipped: 0
+[INFO] BUILD FAILURE
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.2:test (default-test) on project checkout: There are test failures.
+[ERROR] Please refer to /home/runner/work/checkout/checkout/target/surefire-reports for the individual test results.
+##[error]Process completed with exit code 1`,
+        },
+      },
+      {
+        heading: "Dependency, plugin, settings.xml, JDK, toolchain, and cache versus a real FAIL",
+        paragraphs: [
+          "A broken download and a failing test look the same in the Checks UI: a red job and exit code 1. They are not the same failure. Could not resolve dependencies, Could not find artifact, Failed to collect dependencies, Non-resolvable parent POM, Plugin org.apache.maven.plugins:maven-surefire-plugin … or one of its dependencies could not be resolved, status code: 401, and Blocked mirror for repositories mean Maven never reached the test goal. COMPILATION ERROR means the artifacts resolved and javac rejected a source file. <<< FAILURE! and There are test failures, after T E S T S, mean a test ran. If a resolve error and a FAILURE both appear in one paste, rank the earlier module first. Later modules marked SKIPPED are the symptom.",
+          "actions/setup-java selects the JDK before your test step. A red setup-java step — Could not find Java version, or a java-version that the distribution does not publish — means mvn never started. When the step is green, read its java-version and distribution anyway. The compiler uses that JAVA_HOME. A pom with maven.compiler.release set to 21, run on a Temurin 17 that the workflow pinned, dies with Fatal error compiling: error: release version 21 not supported. An older source/target pair prints invalid target release: 21. maven-enforcer-plugin prints Rule 0: org.apache.maven.plugins.enforcer.RequireJavaVersion failed and Detected JDK version 17 … is not in the allowed range [21,). Those are JDK mismatches, not test failures. Ubuntu-latest also ships a preinstalled JDK and mvn. A workflow that skips setup-java compiles with whatever the image default is, and that default moves when GitHub bumps the runner image.",
+          "maven-toolchains-plugin is a separate gate. setup-java exports JAVA_HOME. It does not write ~/.m2/toolchains.xml. A pom that binds the toolchain goal fails before any test with Cannot find matching toolchain definitions for the following toolchain types: jdk [ version='21' ] and Please make sure you define the required toolchains in your ~/.m2/toolchains.xml file. Write a toolchains file that points that version at the setup-java installation, or drop the plugin if the build should just use JAVA_HOME. A ./mvnw download that cannot fetch the distribution in .mvn/wrapper/maven-wrapper.properties also dies before tests — the Maven version is the wrapper's distributionUrl, not the mvn your laptop installed with SDKMAN.",
+          "Dependencies, plugins, settings.xml, and the local repository are the other install family. Could not find artifact com.acme:billing-api:jar:2.4.0 in central means the coordinate is not in any repository the build asked. A private repository that answers status code: 401, reason phrase: Unauthorized (401) — or 403 — means settings.xml did not authenticate. The <server><id> must equal the repository id in the pom (or the server-id you passed to setup-java). A password that works on push is empty on a fork pull request, because repository secrets are not shared with forks, so the same 401 appears only on those PRs. Maven 3.8.1 and newer block HTTP repositories: Blocked mirror for repositories, often via maven-default-http-blocker. Point the repository at https, or the runner will not download it. A <mirror> of central at a host the runner cannot resolve fails the same way, with no T E S T S banner.",
+          "actions/setup-java with cache: maven stores ~/.m2/repository, keyed from the pom files. A cache miss only slows the job. A hit that restores a truncated jar fails while loading a plugin or a test dependency with java.util.zip.ZipException: invalid LOC header (bad signature). That is a corrupt cache entry, not an assertion. Delete that artifact from the local repo or bust the setup-java cache and re-run. Do not treat the miss itself as the root cause of a <<< FAILURE!. A SNAPSHOT that the cache still holds, while the pom version did not change, can also test the wrong bytes — publish and resolve again, or stop caching that snapshot path.",
+        ],
+        list: [
+          "setup-java: the setup step is red, or the first compiler line is release version 21 not supported, invalid target release: 21, or RequireJavaVersion failed. Set java-version to the same release the pom compiles for. Confirm JAVA_HOME in that step.",
+          "Toolchains: Cannot find matching toolchain definitions for the following toolchain types. Add ~/.m2/toolchains.xml for that jdk version, pointing at the setup-java home. setup-java alone does not write this file.",
+          "Wrapper: a failure to download the distributionUrl, or Could not find or load main class org.apache.maven.wrapper.MavenWrapperMain, means ./mvnw never ran Maven. Commit the wrapper files the script expects, and reproduce with ./mvnw, not a different local mvn.",
+          "Dependency: Could not resolve dependencies, Could not find artifact, Failed to read artifact descriptor, or Non-resolvable parent POM. The test goal did not run. Fix the coordinate, the repository, or the parent relativePath.",
+          "Plugin: Plugin … or one of its dependencies could not be resolved. Surefire (or the compiler) was not even downloaded. Same family as a dependency miss.",
+          "settings.xml: status code: 401 or 403, authentication failed, or Blocked mirror for repositories. Match server id to repository id. Use https. Fork pull requests do not receive the password secret.",
+          "Cache: invalid LOC header (bad signature) while reading a jar under ~/.m2/repository. Purge that artifact or the setup-java cache. A miss is not a failure.",
+          "Compile: COMPILATION ERROR and cannot find symbol, from maven-compiler-plugin compile or testCompile. Fix the Java file. There is no <<< FAILURE! yet.",
+          "Test: <<< FAILURE! or <<< ERROR! after T E S T S, then There are test failures and a surefire-reports path. Re-run that test class.",
+        ],
+        code: {
+          label: "Same exit code, different first errors",
+          content: `# Dependency — tests never ran
+[ERROR] Failed to execute goal on project checkout: Could not resolve dependencies for project com.acme:checkout:jar:1.0.0
+[ERROR] dependency: com.acme:billing-api:jar:2.4.0 (compile)
+[ERROR] 	Could not find artifact com.acme:billing-api:jar:2.4.0 in central (https://repo.maven.apache.org/maven2)
+##[error]Process completed with exit code 1
+
+# Plugin — Surefire never started
+[ERROR] Plugin org.apache.maven.plugins:maven-surefire-plugin:3.5.2 or one of its dependencies could not be resolved:
+[ERROR] 	Could not find artifact org.apache.maven.plugins:maven-surefire-plugin:jar:3.5.2 in central (https://repo.maven.apache.org/maven2)
+##[error]Process completed with exit code 1
+
+# settings.xml — 401, tests never ran
+[ERROR] Failed to execute goal on project checkout: Could not resolve dependencies for project com.acme:checkout:jar:1.0.0: Failed to collect dependencies at com.acme:billing-api:jar:2.4.0: Could not transfer artifact com.acme:billing-api:pom:2.4.0 from/to acme-releases (https://maven.acme.example/releases): status code: 401, reason phrase: Unauthorized (401)
+##[error]Process completed with exit code 1
+
+# HTTP repository blocked since Maven 3.8.1 — tests never ran
+[ERROR] Could not transfer artifact com.acme:billing-api:pom:2.4.0 from/to maven-default-http-blocker (http://0.0.0.0/): Blocked mirror for repositories: [legacy-releases (http://repo.acme.example/releases, default, releases)]
+##[error]Process completed with exit code 1
+
+# JDK — compiler never accepted the release
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.13.0:compile (default-compile) on project checkout: Fatal error compiling: error: release version 21 not supported -> [Help 1]
+##[error]Process completed with exit code 1
+
+# Toolchain — no toolchains.xml on the runner
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-toolchains-plugin:3.2.0:toolchain (default) on project checkout: Cannot find matching toolchain definitions for the following toolchain types:
+[ERROR] jdk [ version='21' ]
+[ERROR] Please make sure you define the required toolchains in your ~/.m2/toolchains.xml file.
+##[error]Process completed with exit code 1
+
+# Corrupt Maven cache — jar in ~/.m2 did not load
+java.util.zip.ZipException: invalid LOC header (bad signature)
+##[error]Process completed with exit code 1
+
+# Compile — no test method ran
+[ERROR] COMPILATION ERROR :
+[ERROR] /home/runner/work/checkout/checkout/src/main/java/com/acme/checkout/Billing.java:[14,9] cannot find symbol
+[ERROR]   symbol:   method applyDiscount(int)
+[ERROR]   location: class com.acme.checkout.Billing
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.13.0:compile (default-compile) on project checkout: Compilation failure
+##[error]Process completed with exit code 1
+
+# Fork crash — Surefire started a JVM; it is not an assertion
+[ERROR] The forked VM terminated without properly saying goodbye. VM crash or System.exit called?
+[ERROR] org.apache.maven.surefire.booter.SurefireBooterForkException: The forked VM terminated without properly saying goodbye. VM crash or System.exit called?
+##[error]Process completed with exit code 1
+
+# Real test — the class ran and the assertion failed
+[ERROR] com.acme.checkout.BillingTest.appliesSummerCoupon -- Time elapsed: 0.012 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: expected: <18> but was: <20>
+	at com.acme.checkout.BillingTest.appliesSummerCoupon(BillingTest.java:21)
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.2:test (default-test) on project checkout: There are test failures.
+[ERROR] Please refer to /home/runner/work/checkout/checkout/target/surefire-reports for the individual test results.
+##[error]Process completed with exit code 1`,
+        },
+      },
+      {
+        heading: "Reproduce with the same CI command",
+        paragraphs: [
+          "A laptop that already has a warm ~/.m2, a settings.xml with the private server password, and a newer JDK than the workflow is not the CI gate. Match the runner: the same distribution and java-version as actions/setup-java (read them from that step), then the exact Maven invocation. If CI runs ./mvnw -B -ntp -s .github/maven-settings.xml test, run that — not mvn test after a local install already filled the repository with a SNAPSHOT the runner will not see.",
+          "Pass the same -P profiles, -D arguments, and goals. test and verify are different plugins. -Dtest=BillingTest#appliesSummerCoupon reruns one method once the full build fails the same way. --also-make (-am) matters in a reactor: a failure in an upstream module never reaches the module you re-ran alone. If the workflow uses the wrapper, ./mvnw -v is the Maven version to match, from distributionUrl.",
+        ],
+        list: [
+          "JDK: install the version from setup-java. Confirm with java -version and echo \"$JAVA_HOME\". The release in the pom must be less than or equal to that JDK.",
+          "Settings: use the same -s file CI uses. The server id matches the repository id. Do not commit passwords. Fork PRs still will not have the secret.",
+          "Test: ./mvnw -B -ntp test. One class: ./mvnw -B -ntp -Dtest=BillingTest test. One method: ./mvnw -B -ntp -Dtest=BillingTest#appliesSummerCoupon test.",
+          "Profiles and verify: add -Pci only when the workflow does. Use verify when CI does — that is failsafe, and the report directory is target/failsafe-reports.",
+        ],
+        code: {
+          label: "Same commands the runner used",
+          content: `java -version
+echo "$JAVA_HOME"
+./mvnw -v
+./mvnw -B -ntp test
+# one class:
+./mvnw -B -ntp -Dtest=BillingTest test
+# one method:
+./mvnw -B -ntp -Dtest=BillingTest#appliesSummerCoupon test
+# only if CI passed these:
+./mvnw -B -ntp -s .github/maven-settings.xml -Pci verify`,
+        },
+      },
+      {
+        heading: "Paste the log when the first error is still unclear",
+        paragraphs: [
+          "If the log is long or the first error is buried under dependency download noise, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
+        ],
+        links: [
+          { href: "/analyze", label: "Paste a log on CauseCI" },
+          {
+            href: ACTION_INSTALL_PATH,
+            label: "Optional: install the failure-teaser Action",
+          },
+          { href: "/guides", label: "All CI failure guides" },
+          {
+            href: "/guides/rust-test-failed-github-actions",
+            label: "Rust cargo test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/go-test-failed-github-actions",
+            label: "Go test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/cypress-failed-github-actions",
+            label: "Cypress failed in GitHub Actions",
+          },
+          {
+            href: "/guides/playwright-failed-github-actions",
+            label: "Playwright failed in GitHub Actions",
+          },
+          {
+            href: "/guides/vitest-failed-github-actions",
+            label: "Vitest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/jest-failed-github-actions",
+            label: "Jest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/npm-test-failed-github-actions",
+            label: "npm test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/typescript-failed-github-actions",
+            label: "TypeScript / tsc failed in GitHub Actions",
+          },
+          {
+            href: "/guides/eslint-failed-github-actions",
+            label: "ESLint failed in GitHub Actions",
+          },
+          {
+            href: "/guides/pytest-failed-github-actions",
+            label: "pytest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/explain-github-actions-failure",
+            label: "Explain this GitHub Actions failure",
+          },
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question:
+          "Why does GitHub say Process completed with exit code 1 after Maven?",
+        answer:
+          "That line is a wrapper. Maven exits 1 for every failure, so the phrase mvn test Process completed with exit code 1 is not the diagnosis. BUILD FAILURE and [Help 1] are the summary under it. Scroll up to the first <<< FAILURE!, <<< ERROR!, There are test failures, Could not resolve dependencies, COMPILATION ERROR, status code: 401, or release version … not supported — that is the cause.",
+      },
+      {
+        question:
+          "How do I tell a dependency, plugin, settings.xml, JDK, toolchain, or cache failure from a real Surefire FAIL?",
+        answer:
+          "If actions/setup-java is red, or the log prints Could not resolve dependencies, Could not find artifact, Plugin … could not be resolved, status code: 401, Blocked mirror for repositories, release version 21 not supported, invalid target release, RequireJavaVersion failed, or Cannot find matching toolchain definitions, mvn test never graded your suite. invalid LOC header (bad signature) is a corrupt ~/.m2 jar. COMPILATION ERROR and cannot find symbol mean javac stopped the module. A real Surefire failure shows T E S T S, <<< FAILURE! or <<< ERROR!, There are test failures, and a target/surefire-reports path. The forked VM terminated without properly saying goodbye is a Surefire JVM crash, not an assertion.",
+      },
+      {
+        question: "Why do Maven tests pass locally and fail in GitHub Actions?",
+        answer:
+          "The laptop often has a newer JDK, a warm ~/.m2, and a settings.xml whose server password the runner does not have. ubuntu-latest uses the setup-java version, refuses an HTTP repository (Blocked mirror for repositories), and does not create toolchains.xml for you. A pom release of 21 on a workflow that pins Java 17 fails with release version 21 not supported before any test. Fork pull requests also drop secrets, so a private repository returns 401 only on those builds. A cached SNAPSHOT or a jar with an invalid LOC header fails on the runner and not on the laptop.",
+      },
+      {
+        question:
+          "What does There are test failures mean compared with Could not resolve dependencies?",
+        answer:
+          "Could not resolve dependencies, Could not find artifact, and Plugin … could not be resolved mean Maven stopped during the download. No test method ran, so there is no <<< FAILURE! and no T E S T S banner. COMPILATION ERROR is the same split one step later: javac failed, Surefire did not run. There are test failures, printed by maven-surefire-plugin after <<< FAILURE! or <<< ERROR!, means the test JVM started and a test failed. Please refer to …/target/surefire-reports is where that result was written. Fix the first one you see. A later module marked SKIPPED is a consequence.",
+      },
+      {
+        question:
+          "Do I need to install a GitHub Action to explain Maven test failed GitHub Actions?",
+        answer:
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+      },
+    ],
+  },
+  {
     slug: ACTION_INSTALL_SLUG,
     path: ACTION_INSTALL_PATH,
     title: "Install the CauseCI GitHub Action",

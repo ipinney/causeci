@@ -41,6 +41,7 @@ describe("public SEO routes", () => {
       "/guides/cypress-failed-github-actions",
       "/guides/go-test-failed-github-actions",
       "/guides/rust-test-failed-github-actions",
+      "/guides/maven-test-failed-github-actions",
       ACTION_INSTALL_PATH,
     ]);
     expect(paths.some((path) => path.startsWith("/jobs"))).toBe(false);
@@ -62,7 +63,7 @@ describe("public SEO routes", () => {
   });
 
   it("keeps each guide useful: lede, sections, CTA-related FAQ, and a paste path", () => {
-    expect(GUIDES).toHaveLength(14);
+    expect(GUIDES).toHaveLength(15);
     expect(new Set(GUIDES.map((guide) => guide.slug)).size).toBe(GUIDES.length);
     expect(new Set(GUIDES.map((guide) => guide.path)).size).toBe(GUIDES.length);
     for (const guide of GUIDES) {
@@ -703,6 +704,96 @@ describe("public SEO routes", () => {
       ]),
     );
     expect(related).not.toContain("rust-test-failed-github-actions");
+    expect(GUIDES.at(-1)?.slug).toBe("install-github-action-failure-teaser");
+  });
+
+  it("documents Maven Surefire vs dependency, settings, JDK, and cache failures for GitHub Actions", () => {
+    const guide = getGuide("maven-test-failed-github-actions");
+    expect(guide).toBeDefined();
+    expect(guide?.path).toBe("/guides/maven-test-failed-github-actions");
+    expect(guide?.title).toBe("Maven / Surefire test failed in GitHub Actions");
+    expect(guide?.updatedAt).toBe("2026-09-29");
+    expect(guide?.keywords).toEqual(
+      expect.arrayContaining([
+        "maven test failed GitHub Actions",
+        "maven surefire Process completed with exit code 1",
+        "mvn test failed CI",
+        "settings.xml / dependency / cache drift",
+        "JDK / toolchain",
+      ]),
+    );
+    const body = [
+      guide?.lede,
+      ...(guide?.sections.flatMap((section) => [
+        ...section.paragraphs,
+        ...(section.list ?? []),
+        section.code?.content ?? "",
+      ]) ?? []),
+      ...(guide?.faqs.map((faq) => `${faq.question} ${faq.answer}`) ?? []),
+    ].join("\n");
+    expect(body).toMatch(/\.\/mvnw -B -ntp test/);
+    expect(body).toMatch(/<<< FAILURE!/);
+    expect(body).toMatch(/<<< ERROR!/);
+    expect(body).toMatch(/There are test failures/);
+    expect(body).toMatch(/target\/surefire-reports/);
+    expect(body).toMatch(/maven-surefire-plugin/);
+    expect(body).toMatch(/Could not resolve dependencies/);
+    expect(body).toMatch(/Could not find artifact/);
+    expect(body).toMatch(/could not be resolved/);
+    expect(body).toMatch(/status code: 401/);
+    expect(body).toMatch(/settings\.xml/);
+    expect(body).toMatch(/Blocked mirror for repositories/);
+    expect(body).toMatch(/release version 21 not supported/);
+    expect(body).toMatch(/toolchains\.xml/);
+    expect(body).toMatch(/actions\/setup-java/);
+    expect(body).toMatch(/invalid LOC header \(bad signature\)/);
+    expect(body).toMatch(/COMPILATION ERROR/);
+    expect(body).toMatch(/cannot find symbol/);
+    expect(body).toMatch(/The forked VM terminated without properly saying goodbye/);
+    expect(body).toContain("Process completed with exit code 1");
+    expect(body).toContain("/analyze");
+    expect(body).toContain("/guides");
+    expect(body).toContain(ACTION_INSTALL_PATH);
+    expect(body).toContain("ipinney/causeci/action@main");
+    expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
+    expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
+    const links = guide?.sections.flatMap((section) => section.links ?? []) ?? [];
+    expect(links.some((link) => link.href === "/analyze")).toBe(true);
+    expect(links.some((link) => link.href === ACTION_INSTALL_PATH)).toBe(true);
+    expect(links.some((link) => link.href === "/guides")).toBe(true);
+    for (const href of [
+      "/guides/rust-test-failed-github-actions",
+      "/guides/go-test-failed-github-actions",
+      "/guides/cypress-failed-github-actions",
+      "/guides/playwright-failed-github-actions",
+      "/guides/vitest-failed-github-actions",
+      "/guides/jest-failed-github-actions",
+      "/guides/npm-test-failed-github-actions",
+      "/guides/typescript-failed-github-actions",
+      "/guides/eslint-failed-github-actions",
+      "/guides/pytest-failed-github-actions",
+      "/guides/explain-github-actions-failure",
+    ]) {
+      expect(links.some((link) => link.href === href)).toBe(true);
+    }
+    const related = otherGuides("maven-test-failed-github-actions").map((item) => item.slug);
+    expect(related).toEqual(
+      expect.arrayContaining([
+        "rust-test-failed-github-actions",
+        "go-test-failed-github-actions",
+        "cypress-failed-github-actions",
+        "playwright-failed-github-actions",
+        "vitest-failed-github-actions",
+        "jest-failed-github-actions",
+        "npm-test-failed-github-actions",
+        "typescript-failed-github-actions",
+        "eslint-failed-github-actions",
+        "pytest-failed-github-actions",
+        "install-github-action-failure-teaser",
+        "explain-github-actions-failure",
+      ]),
+    );
+    expect(related).not.toContain("maven-test-failed-github-actions");
     expect(GUIDES.at(-1)?.slug).toBe("install-github-action-failure-teaser");
   });
 });
