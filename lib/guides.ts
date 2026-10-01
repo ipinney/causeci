@@ -2515,6 +2515,306 @@ echo "$JAVA_HOME"
     ],
   },
   {
+    slug: "phpunit-failed-github-actions",
+    path: "/guides/phpunit-failed-github-actions",
+    title: "PHPUnit test failed in GitHub Actions",
+    description:
+      "How to read a red vendor/bin/phpunit or composer test step in GitHub Actions: distinguish a composer install, missing ext-*, phpunit.xml, bootstrap autoload, memory_limit, or deprecations-as-errors failure from a real assertion, and ignore Process completed with exit code 1.",
+    eyebrow: "vendor/bin/phpunit · PHP · Composer",
+    lede:
+      "When PHPUnit fails in GitHub Actions, the last line is almost always Process completed with exit code 1. That is a wrapper. The cause is the first real error — a composer install that did not finish, a missing ext-*, a phpunit.xml or bootstrap autoload problem, an allowed memory size fatal, a deprecation the suite treats as a failure, or a real Failed asserting line.",
+    keywords: [
+      "PHPUnit failed GitHub Actions",
+      "vendor/bin/phpunit Process completed with exit code 1",
+      "There were X failures",
+      "composer test failed CI",
+      "composer / ext / memory / phpunit.xml",
+    ],
+    updatedAt: "2026-10-01",
+    sections: [
+      {
+        heading: "Start at the first error, not exit code 1",
+        paragraphs: [
+          "A red vendor/bin/phpunit or composer test step almost always ends with Process completed with exit code 1. Ignore that wrapper line. PHPUnit exits 1 when a test fails or errors. It exits 2 when it cannot start — the XML cannot be read, or the arguments are invalid — and GitHub then prints Process completed with exit code 2. A PHP fatal, including Allowed memory size, exits 255. Composer exits 2 when the solver fails (Your requirements could not be resolved). Scroll up in the failing step to the first FAILURES!, ERRORS!, There was 1 failure, There were 2 failures, There was 1 error, Failed asserting, PHP Fatal error, Allowed memory size, Your requirements could not be resolved, it is missing from your system, Could not open input file: vendor/bin/phpunit, or Could not read XML from file. That sentence is the diagnosis you are trying to name.",
+          "PHPUnit does not print Jest's FAIL path or Test Suites: line, Vitest's RUN  v banner, Playwright's Running N tests using M workers, Cypress's Running: spec.cy.js, Go's --- FAIL:, Cargo's test result: FAILED, Maven's <<< FAILURE!, or Gradle's Execution failed for task ':test'. A real PHPUnit 10 or 11 log prints PHPUnit 11.x by Sebastian Bergmann and contributors., then Runtime: PHP and Configuration: …/phpunit.xml, then a progress line such as ...F, then There was 1 failure: or There were 2 failures:, then the class and method and Failed asserting that 20 is identical to 18., then FAILURES! and Tests: 4, Assertions: 7, Failures: 1. FAILURES! is the summary, not the cause. If you never see that banner, PHPUnit did not grade the suite. An ERRORS! banner with Errors: 1 is an unexpected throwable, not an assertion. The Gradle guide is the same split for JUnit; this page is vendor/bin/phpunit, composer test, and the test method.",
+        ],
+        list: [
+          "Search the raw job log for FAILURES!, ERRORS!, There was 1 failure, There were 2 failures, Failed asserting, PHP Fatal error, Allowed memory size, Your requirements could not be resolved, it is missing from your system, Could not open input file, Could not read XML from file, No code coverage driver is available, and ##[error].",
+          "Quote the first of those lines — do not paraphrase the wrapper Process completed with exit code 1, and do not stop at FAILURES!.",
+          "If the first error is in shivammathur/setup-php or composer install, or the log stops before the PHPUnit banner, vendor/bin/phpunit never graded your suite. Treat that as a PHP, composer, or extension failure.",
+        ],
+      },
+      {
+        heading: "Common PHPUnit CI failures",
+        paragraphs: [
+          "After composer install succeeded and the autoload was dumped, the first red block is one of a short list. Rank it in this order. A composer or extension failure happens before the PHPUnit banner. A phpunit.xml or bootstrap failure happens as PHPUnit starts and usually exits 2, with no Tests: line. A PHP Fatal error: Allowed memory size, or a child process that dies under process isolation, kills the run without a Failed asserting line. A Deprecations: count with no Failures: count means the suite is treating deprecations as errors. A Failed asserting line under There was 1 failure: means that test method ran. The pytest guide is the same split for Python; this page is PHPUnit 10 and 11, the XML file, and the test method.",
+          "vendor/bin/phpunit is the binary Composer installs from phpunit/phpunit, a require-dev package. composer test runs it only when composer.json defines a test script, usually phpunit or vendor/bin/phpunit, because Composer puts vendor/bin on the PATH for scripts. Script \"test\" is not defined in this package means Composer never started PHPUnit. Could not open input file: vendor/bin/phpunit means the binary is absent, almost always because composer install --no-dev omitted require-dev, or because install never finished.",
+          "PHPUnit 10 and 11 print the same assertion shape. assertSame prints Failed asserting that 20 is identical to 18. assertEquals prints Failed asserting that 20 matches expected 18. The progress glyph F is a failure (an assertion returned false). E is an error (an Error or Exception the test did not catch, including a missing class). D is a deprecation. The summary line is Tests: N, Assertions: M, then Failures, Errors, or Deprecations. There was 1 failure: is the heading for a single method. There were 2 failures: is that heading when more than one method failed — the There were X failures line people search for. Neither heading is the cause. The numbered class::method under it is.",
+          "Process isolation is a different mode. processIsolation=\"true\" in phpunit.xml, or --process-isolation, runs each test in its own PHP process. A child that dies does not print Failed asserting. PHPUnit reports There was 1 error: and Test was run in child process and ended unexpectedly, then ERRORS! and Errors: 1. The fatal from the child, often PHP Fatal error: Allowed memory size of 134217728 bytes exhausted, is above that line. Coverage is the other optional gate. A coverage report in phpunit.xml, or --coverage-text or --coverage-clover, needs pcov or xdebug. No code coverage driver is available means the driver was not loaded. The tests may have passed. That is an extension gap, not an assertion.",
+        ],
+        list: [
+          "Real assertion (PHPUnit 10/11): There was 1 failure:, then Acme\\Checkout\\BillingTest::testAppliesSummerCoupon, then Failed asserting that 20 is identical to 18., then FAILURES! and Tests: 4, Assertions: 7, Failures: 1. The class loaded. Open that method.",
+          "Several assertions: There were 2 failures: and Failures: 2. Same family. Read the first numbered method. There were X failures is this heading.",
+          "Unexpected error: There was 1 error:, then Error: Class \"Acme\\Checkout\\Coupon\" not found, then ERRORS! and Tests: 4, Assertions: 3, Errors: 1. The runner started. It is still a test result, not a composer failure, unless the missing class is because the autoload was never dumped.",
+          "Process isolation: Test was run in child process and ended unexpectedly, often after Allowed memory size of 134217728 bytes exhausted. The child PHP died. It is not an assertion. processIsolation=\"true\" or --process-isolation turned that mode on.",
+          "Deprecations as errors: There was 1 deprecation: and FAILURES! with Deprecations: 1 and no Failures: count. failOnDeprecation=\"true\" or --fail-on-deprecation turned a PHP deprecation into a red suite. A PHPUnit deprecation (doc-comment metadata) prints PHPUnit Deprecations: 1 when failOnPhpunitDeprecation or --fail-on-phpunit-deprecation is set.",
+          "No tests: No tests executed! The testsuite directory, the suffix, or the --filter did not see a class. Nothing asserted.",
+          "Config: Could not read XML from file \"phpunit.xml\" or Could not load \"phpunit.xml\" exits 2, and no test method ran. Element 'filter': This element is not expected is a PHPUnit 9 file on PHPUnit 10 or 11. Run vendor/bin/phpunit --migrate-configuration. It is not an assertion.",
+        ],
+        code: {
+          label: "PHPUnit failure log excerpt",
+          content: `PHPUnit 11.5.3 by Sebastian Bergmann and contributors.
+
+Runtime:       PHP 8.3.14
+Configuration: /home/runner/work/checkout/checkout/phpunit.xml
+
+...F                                                                4 / 4 (100%)
+
+Time: 00:00.048, Memory: 10.00 MB
+
+There was 1 failure:
+
+1) Acme\\Checkout\\BillingTest::testAppliesSummerCoupon
+Failed asserting that 20 is identical to 18.
+
+/home/runner/work/checkout/checkout/tests/BillingTest.php:21
+
+FAILURES!
+Tests: 4, Assertions: 7, Failures: 1.
+##[error]Process completed with exit code 1`,
+        },
+      },
+      {
+        heading: "Composer, extensions, memory, and config versus a real assertion",
+        paragraphs: [
+          "A broken composer install and a failing assertion look the same in the Checks UI: a red job and an exit code. They are not the same failure. Your requirements could not be resolved, it is missing from your system, requires php >=8.2, Could not open input file: vendor/bin/phpunit, and Script \"test\" is not defined in this package mean PHPUnit never reached a test method. Could not read XML from file and a bootstrap PHP Fatal error: Failed opening required mean PHPUnit started and then stopped before the suite. Allowed memory size and Test was run in child process and ended unexpectedly mean a PHP process died. Deprecations: 1 with no Failed asserting line means the suite is configured to fail on deprecations. Failed asserting, after There was 1 failure:, means a test ran. If a composer error and a FAILURES! banner both appear in one paste, rank the earlier step first.",
+          "shivammathur/setup-php selects the PHP version before composer. A red setup step — Invalid PHP version, or an extension that fails to install — means composer and vendor/bin/phpunit never started. When the step is green, read its php-version, extensions, and coverage anyway. PHPUnit 11 requires PHP 8.2 or newer. PHPUnit 10.5 runs on PHP 8.1. A workflow that pins php-version: \"8.1\" and a composer.json that requires phpunit/phpunit ^11 fails the solver with requires php >=8.2 -> your php version (8.1.27) does not satisfy that requirement. ubuntu-latest does not provide a project PHP until setup-php runs. A workflow that skips that action uses whatever php is on the image, and that binary moves when GitHub bumps the runner.",
+          "Extensions are the other install gate. phpunit/phpunit requires ext-dom, ext-mbstring, ext-xml, and ext-xmlwriter. The solver line is phpunit/phpunit 11.5.3 requires ext-dom * -> it is missing from your system. Install or enable PHP's dom extension. Add the extension to setup-php, for example extensions: mbstring, xml, dom. composer install --ignore-platform-reqs hides that line and turns it into a later fatal: PHP Fatal error: Uncaught Error: Class \"DOMDocument\" not found. That fatal is still a missing extension, not an assertion. Coverage wants a driver too. coverage: pcov or coverage: xdebug on setup-php loads it. Without one, a phpunit.xml coverage report or --coverage-clover prints No code coverage driver is available.",
+          "phpunit.xml and the bootstrap are the config gate. PHPUnit reads phpunit.xml in the working directory, then phpunit.xml.dist. A phpunit.xml that exists only on a laptop, or a working directory that is not the repo root, makes CI load a different file — or none. Could not read XML from file \"phpunit.xml\" means the path does not exist. Could not load \"phpunit.xml\" means the file exists and is not well-formed XML. Either of those exits 2, and no test runs. Element 'filter': This element is not expected means the file is PHPUnit 9 configuration. PHPUnit 10 and 11 replaced filter and logging with source and coverage. vendor/bin/phpunit --migrate-configuration rewrites it. Your XML configuration validates against a deprecated schema is the same family. It is not an assertion. bootstrap=\"vendor/autoload.php\" or bootstrap=\"tests/bootstrap.php\" runs before any test. PHP Fatal error: Uncaught Error: Failed opening required '/home/runner/work/checkout/checkout/vendor/autoload.php' means composer install did not produce the autoload, or the bootstrap path is wrong relative to the working directory. Class \"PHPUnit\\Framework\\TestCase\" not found is the same family: the file ran without Composer's autoload. A test file that does not contain the class PHPUnit expects prints Class BillingTest cannot be found in …/tests/BillingTest.php. No tests executed! means the testsuite directory or suffix matched nothing.",
+          "Memory and deprecations are the runtime gates that look like test failures. shivammathur/setup-php sets memory_limit=-1 unless the workflow overrides it. PHP Fatal error: Allowed memory size of 134217728 bytes exhausted (tried to allocate 65536 bytes) means something lowered the limit: ini-values: memory_limit=128M on setup-php, php -d memory_limit=128M, or an ini name=\"memory_limit\" value=\"128M\" entry in phpunit.xml. xdebug coverage multiplies usage until that cap. Raise the limit or turn coverage off for the unit step. It is not a failed assertion. failOnDeprecation=\"true\", or --fail-on-deprecation, turns a PHP deprecation into FAILURES! with Deprecations: 1 and no Failures: count. A newer PHP on the runner (php-version: \"8.4\" against a laptop on 8.2) emits deprecations the laptop never saw. failOnPhpunitDeprecation and --fail-on-phpunit-deprecation do the same for PHPUnit's own notices, including metadata in doc-comments, which PHPUnit 11 deprecates ahead of PHPUnit 12. The summary says PHPUnit Deprecations: 1. Read the deprecation text. Do not treat it as Failed asserting.",
+          "The cache is the last install footgun. actions/cache on vendor/ can restore a tree built on another PHP version, or one installed with --ignore-platform-reqs. vendor/bin/phpunit then fatals, or the classmap is stale and a new test class is missing. Cache Composer's download cache and run composer install --no-interaction --prefer-dist --no-progress on every job. A cache miss only slows the job. The lock file is not up to date with the latest changes in composer.json is a warning that composer.json moved without composer update. Your lock file does not contain a compatible set of packages. Please run composer update. means the locked set cannot install on this PHP. PHPUnit never starts. Do not commit vendor/. Commit composer.lock.",
+        ],
+        list: [
+          "setup-php: the setup step is red, or the solver says requires php >=8.2. Set php-version to a PHP that this PHPUnit can run on. PHPUnit 11 needs 8.2 or newer. PHPUnit 10.5 still runs on 8.1.",
+          "Extension: it is missing from your system, or Class \"DOMDocument\" not found after --ignore-platform-reqs. Add the ext to setup-php. ext-dom is the usual one.",
+          "Binary: Could not open input file: vendor/bin/phpunit. Drop --no-dev on the CI install. phpunit/phpunit is require-dev. Script \"test\" is not defined in this package means composer test is not vendor/bin/phpunit until composer.json has that script.",
+          "XML: Could not read XML from file or Could not load exits 2, and no test method ran. Element 'filter': This element is not expected is a PHPUnit 9 file. --migrate-configuration rewrites it. It is not an assertion.",
+          "Bootstrap: Failed opening required and vendor/autoload.php, or Class \"PHPUnit\\Framework\\TestCase\" not found. composer install has to finish before PHPUnit, and bootstrap has to require the autoload.",
+          "Memory: Allowed memory size of 134217728 bytes exhausted. Raise memory_limit. Test was run in child process and ended unexpectedly is the same death under processIsolation=\"true\".",
+          "Deprecation: Deprecations: 1 or PHPUnit Deprecations: 1, and no Failed asserting. failOnDeprecation=\"true\" or --fail-on-deprecation made a notice fail the suite. Fix the deprecated call, or stop failing on it, on purpose.",
+          "Coverage: No code coverage driver is available. Set coverage: pcov or coverage: xdebug on setup-php, or drop --coverage-clover from a step that only needs assertions.",
+          "Assertion: There was 1 failure: or There were 2 failures:, Failed asserting, FAILURES!, and Tests: N, Assertions: M, Failures: 1. Re-run that method.",
+        ],
+        code: {
+          label: "Same wrapper, different first errors",
+          content: `# Composer / PHP version — PHPUnit never started
+Your requirements could not be resolved to an installable set of packages.
+
+  Problem 1
+    - Root composer.json requires phpunit/phpunit ^11.0 -> satisfiable by phpunit/phpunit[11.5.3].
+    - phpunit/phpunit 11.5.3 requires php >=8.2 -> your php version (8.1.27) does not satisfy that requirement.
+##[error]Process completed with exit code 2
+
+# Missing ext-dom — PHPUnit never started
+Your requirements could not be resolved to an installable set of packages.
+
+  Problem 1
+    - phpunit/phpunit 11.5.3 requires ext-dom * -> it is missing from your system. Install or enable PHP's dom extension.
+##[error]Process completed with exit code 2
+
+# --no-dev — the binary is not installed
+Could not open input file: vendor/bin/phpunit
+##[error]Process completed with exit code 1
+
+# composer test — no script
+Script "test" is not defined in this package
+##[error]Process completed with exit code 1
+
+# phpunit.xml missing — PHPUnit exits 2
+Could not read XML from file "phpunit.xml"
+##[error]Process completed with exit code 2
+
+# phpunit.xml is not well-formed XML — PHPUnit exits 2
+Could not load "phpunit.xml":
+Opening and ending tag mismatch: phpunit line 2 and foo
+##[error]Process completed with exit code 2
+
+# PHPUnit 9 <filter> on PHPUnit 10/11 — not an assertion
+Element 'filter': This element is not expected.
+Your XML configuration validates against a deprecated schema. Migrate your XML configuration using "--migrate-configuration"!
+
+# Bootstrap autoload — composer install did not produce vendor/
+PHP Fatal error:  Uncaught Error: Failed opening required '/home/runner/work/checkout/checkout/vendor/autoload.php' (include_path='.:/usr/share/php') in /home/runner/work/checkout/checkout/tests/bootstrap.php:3
+##[error]Process completed with exit code 255
+
+# Memory — a PHP process died; nothing asserted
+PHP Fatal error:  Allowed memory size of 134217728 bytes exhausted (tried to allocate 65536 bytes) in /home/runner/work/checkout/checkout/src/Billing.php on line 88
+##[error]Process completed with exit code 255
+
+# Process isolation — child died
+There was 1 error:
+
+1) Acme\\Checkout\\BillingTest::testBuildsInvoice
+Test was run in child process and ended unexpectedly
+
+ERRORS!
+Tests: 4, Assertions: 3, Errors: 1.
+##[error]Process completed with exit code 1
+
+# Deprecations as errors — no Failed asserting line
+There was 1 deprecation:
+
+1) Acme\\Checkout\\BillingTest::testAppliesSummerCoupon
+* PHP Deprecated:  Implicitly marking parameter $rate as nullable is deprecated, the explicit nullable type must be used instead
+
+FAILURES!
+Tests: 4, Assertions: 7, Deprecations: 1.
+##[error]Process completed with exit code 1
+
+# Coverage driver missing — not an assertion
+No code coverage driver is available
+##[error]Process completed with exit code 1
+
+# Real test — the method ran and the assertion failed
+There was 1 failure:
+
+1) Acme\\Checkout\\BillingTest::testAppliesSummerCoupon
+Failed asserting that 20 is identical to 18.
+
+FAILURES!
+Tests: 4, Assertions: 7, Failures: 1.
+##[error]Process completed with exit code 1`,
+        },
+      },
+      {
+        heading: "Reproduce with the same CI command",
+        paragraphs: [
+          "A laptop that already has ext-dom, a warm vendor/, a php.ini with memory_limit=-1, and a different PHP than the workflow is not the CI gate. Match the runner: the same php-version and extensions as shivammathur/setup-php (read them from that step), then the exact install and the exact test command. If CI runs composer install --no-interaction --prefer-dist --no-progress and then vendor/bin/phpunit, run that — not phpunit from a global PHAR, and not composer install --no-dev.",
+          "Pass the same flags. vendor/bin/phpunit and composer test can differ when the script adds --fail-on-deprecation, --coverage-clover, or -c phpunit.xml.dist. --filter BillingTest reruns one class once the full suite fails the same way. --filter BillingTest::testAppliesSummerCoupon reruns one method. The separator is ::. In a monorepo, run from the directory that contains the phpunit.xml the workflow uses. composer test uses that directory's composer.json.",
+        ],
+        list: [
+          "PHP: install the version from setup-php. Confirm with php -v and php -m. ext-dom, ext-mbstring, ext-xml, and ext-xmlwriter should be listed. For coverage, php -m should include pcov or xdebug.",
+          "Install: composer install --no-interaction --prefer-dist --no-progress. Do not pass --no-dev unless CI does. Do not pass --ignore-platform-reqs unless CI does.",
+          "Test: vendor/bin/phpunit. If CI runs composer test, run composer test. One class: vendor/bin/phpunit --filter BillingTest. One method: vendor/bin/phpunit --filter BillingTest::testAppliesSummerCoupon.",
+          "Flags: add --fail-on-deprecation, --process-isolation, or --coverage-clover only when the workflow does. A local run without those flags can hide the CI failure. Match processIsolation=\"true\" when the XML sets it.",
+        ],
+        code: {
+          label: "Same commands the runner used",
+          content: `php -v
+php -m
+composer install --no-interaction --prefer-dist --no-progress
+vendor/bin/phpunit
+# or, when CI uses the Composer script:
+composer test
+# one class:
+vendor/bin/phpunit --filter BillingTest
+# one method:
+vendor/bin/phpunit --filter 'BillingTest::testAppliesSummerCoupon'
+# only if CI passed these:
+vendor/bin/phpunit --fail-on-deprecation --process-isolation`,
+        },
+      },
+      {
+        heading: "Paste the log when the first error is still unclear",
+        paragraphs: [
+          "If the log is long or the first error is buried under composer download noise, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
+        ],
+        links: [
+          { href: "/analyze", label: "Paste a log on CauseCI" },
+          {
+            href: ACTION_INSTALL_PATH,
+            label: "Optional: install the failure-teaser Action",
+          },
+          { href: "/guides", label: "All CI failure guides" },
+          {
+            href: "/guides/gradle-test-failed-github-actions",
+            label: "Gradle / JUnit test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/maven-test-failed-github-actions",
+            label: "Maven / Surefire test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/rust-test-failed-github-actions",
+            label: "Rust cargo test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/go-test-failed-github-actions",
+            label: "Go test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/cypress-failed-github-actions",
+            label: "Cypress failed in GitHub Actions",
+          },
+          {
+            href: "/guides/playwright-failed-github-actions",
+            label: "Playwright failed in GitHub Actions",
+          },
+          {
+            href: "/guides/vitest-failed-github-actions",
+            label: "Vitest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/jest-failed-github-actions",
+            label: "Jest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/npm-test-failed-github-actions",
+            label: "npm test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/typescript-failed-github-actions",
+            label: "TypeScript / tsc failed in GitHub Actions",
+          },
+          {
+            href: "/guides/eslint-failed-github-actions",
+            label: "ESLint failed in GitHub Actions",
+          },
+          {
+            href: "/guides/pytest-failed-github-actions",
+            label: "pytest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/explain-github-actions-failure",
+            label: "Explain this GitHub Actions failure",
+          },
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question:
+          "Why does GitHub say Process completed with exit code 1 after PHPUnit?",
+        answer:
+          "That line is a wrapper. PHPUnit exits 1 when a test fails or errors, so the phrase vendor/bin/phpunit Process completed with exit code 1 is not the diagnosis. FAILURES! is the summary under it. A config or composer solver failure is often Process completed with exit code 2, and a PHP fatal is Process completed with exit code 255. Scroll up to the first There was 1 failure, There were 2 failures, Failed asserting, ERRORS!, PHP Fatal error, Allowed memory size, Could not read XML from file, or it is missing from your system — that is the cause.",
+      },
+      {
+        question:
+          "How do I tell a composer install, missing ext, phpunit.xml, bootstrap, memory, or deprecation failure from a real assertion?",
+        answer:
+          "If shivammathur/setup-php is red, or the log prints Your requirements could not be resolved, it is missing from your system, Could not open input file: vendor/bin/phpunit, Could not read XML from file, Failed opening required vendor/autoload.php, or No code coverage driver is available, PHPUnit never graded the suite. Allowed memory size of 134217728 bytes exhausted and Test was run in child process and ended unexpectedly are a dead PHP process, including processIsolation. Deprecations: 1 or PHPUnit Deprecations: 1 with no Failed asserting line means failOnDeprecation or --fail-on-deprecation (or the PHPUnit-deprecation switch) failed the run. A real assertion shows There was 1 failure: or There were X failures, Failed asserting that 20 is identical to 18, FAILURES!, and Tests: 4, Assertions: 7, Failures: 1.",
+      },
+      {
+        question: "Why do PHPUnit tests pass locally and fail in GitHub Actions?",
+        answer:
+          "The laptop often has a different PHP than shivammathur/setup-php, ext-dom already loaded, a warm vendor/, and memory_limit=-1. ubuntu-latest uses the setup-php version, refuses phpunit/phpunit 11 on PHP 8.1, and omits an extension the workflow did not list. composer install --no-dev drops vendor/bin/phpunit. A phpunit.xml with failOnDeprecation=\"true\" or processIsolation=\"true\" fails on a PHP 8.4 deprecation or a child-process fatal the laptop never hit. A cached vendor/ tree from another PHP, or a composer.lock that does not match this PHP, fails before any assertion.",
+      },
+      {
+        question:
+          "What does FAILURES! mean compared with Your requirements could not be resolved?",
+        answer:
+          "Your requirements could not be resolved, it is missing from your system, and Could not open input file: vendor/bin/phpunit mean Composer stopped during install. No test method ran, so there is no FAILURES! banner and no Tests: line. Could not read XML from file and Failed opening required vendor/autoload.php are the same split one step later: PHPUnit or the bootstrap stopped, and the suite did not run. FAILURES! together with There was 1 failure: or There were 2 failures: and Failed asserting means the test ran. Tests: N, Assertions: M, Failures: 1 is that result. Fix the first one you see.",
+      },
+      {
+        question:
+          "Do I need to install a GitHub Action to explain PHPUnit failed GitHub Actions?",
+        answer:
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+      },
+    ],
+  },
+  {
     slug: ACTION_INSTALL_SLUG,
     path: ACTION_INSTALL_PATH,
     title: "Install the CauseCI GitHub Action",
