@@ -44,6 +44,7 @@ describe("public SEO routes", () => {
       "/guides/maven-test-failed-github-actions",
       "/guides/gradle-test-failed-github-actions",
       "/guides/phpunit-failed-github-actions",
+      "/guides/rspec-failed-github-actions",
       ACTION_INSTALL_PATH,
     ]);
     expect(paths.some((path) => path.startsWith("/jobs"))).toBe(false);
@@ -65,7 +66,7 @@ describe("public SEO routes", () => {
   });
 
   it("keeps each guide useful: lede, sections, CTA-related FAQ, and a paste path", () => {
-    expect(GUIDES).toHaveLength(17);
+    expect(GUIDES).toHaveLength(18);
     expect(new Set(GUIDES.map((guide) => guide.slug)).size).toBe(GUIDES.length);
     expect(new Set(GUIDES.map((guide) => guide.path)).size).toBe(GUIDES.length);
     for (const guide of GUIDES) {
@@ -985,6 +986,114 @@ describe("public SEO routes", () => {
       ]),
     );
     expect(related).not.toContain("phpunit-failed-github-actions");
+    expect(GUIDES.at(-1)?.slug).toBe("install-github-action-failure-teaser");
+  });
+
+  it("documents RSpec vs Bundler, Ruby, load, and database failures for GitHub Actions", () => {
+    const guide = getGuide("rspec-failed-github-actions");
+    expect(guide).toBeDefined();
+    expect(guide?.path).toBe("/guides/rspec-failed-github-actions");
+    expect(guide?.title).toBe("RSpec failed in GitHub Actions");
+    expect(guide?.updatedAt).toBe("2026-10-02");
+    expect(guide?.keywords).toEqual(
+      expect.arrayContaining([
+        "rspec failed GitHub Actions",
+        "bundle exec rspec Process completed with exit code 1",
+        "4 examples, 1 failure",
+        "bundle install / Gemfile.lock drift",
+      ]),
+    );
+    const body = [
+      guide?.lede,
+      ...(guide?.sections.flatMap((section) => [
+        ...section.paragraphs,
+        ...(section.list ?? []),
+        section.code?.content ?? "",
+      ]) ?? []),
+      ...(guide?.faqs.map((faq) => `${faq.question} ${faq.answer}`) ?? []),
+    ].join("\n");
+    expect(body).toMatch(/bundle exec rspec/);
+    expect(body).toMatch(/bin\/rspec/);
+    expect(body).toMatch(/ruby\/setup-ruby/);
+    expect(body).toMatch(/Failure\/Error:/);
+    expect(body).toMatch(/expected: 18/);
+    expect(body).toMatch(/got: 20/);
+    expect(body).toMatch(/4 examples, 1 failure/);
+    expect(body).toMatch(/Failed examples:/);
+    expect(body).toMatch(/An error occurred while loading/);
+    expect(body).toMatch(/1 error occurred outside of examples/);
+    expect(body).toMatch(/Could not find compatible versions/);
+    expect(body).toMatch(/version solving has failed/);
+    expect(body).toMatch(/Bundler could not find compatible versions for gem/);
+    expect(body).toMatch(/bundler: failed to load command: rspec/);
+    expect(body).toMatch(/Your Ruby version is 3\.2\.4, but your Gemfile specified 3\.3\.6/);
+    expect(body).toMatch(/Could not find rspec-core/);
+    expect(body).toMatch(/An error occurred while installing pg/);
+    expect(body).toMatch(/Can't find the 'libpq-fe\.h header/);
+    expect(body).toMatch(/frozen mode is set/);
+    expect(body).toMatch(/PG::ConnectionBad/);
+    expect(body).toMatch(/ActiveRecord::PendingMigrationError/);
+    expect(body).toMatch(/Zeitwerk::NameError/);
+    expect(body).toMatch(/CI=true/);
+    expect(body).toMatch(/Randomized with seed 48291/);
+    expect(body).toMatch(/--seed 48291/);
+    expect(body).toMatch(/Line coverage \(88\.12%\) is below the expected minimum coverage \(90\.00%\)\./);
+    expect(body).toMatch(/SimpleCov failed with exit 2/);
+    expect(body).toMatch(/Run options: include \{:focus=>true\}/);
+    expect(body).toMatch(/DISABLE_SPRING=1/);
+    expect(body).toMatch(/bundler: command not found: rspec/);
+    expect(body).toContain("Process completed with exit code 1");
+    expect(body).toContain("Process completed with exit code 6");
+    expect(body).toContain("Process completed with exit code 18");
+    expect(body).toContain("/analyze");
+    expect(body).toContain("/guides");
+    expect(body).toContain(ACTION_INSTALL_PATH);
+    expect(body).toContain("ipinney/causeci/action@main");
+    expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
+    expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
+    const links = guide?.sections.flatMap((section) => section.links ?? []) ?? [];
+    expect(links.some((link) => link.href === "/analyze")).toBe(true);
+    expect(links.some((link) => link.href === ACTION_INSTALL_PATH)).toBe(true);
+    expect(links.some((link) => link.href === "/guides")).toBe(true);
+    for (const href of [
+      "/guides/phpunit-failed-github-actions",
+      "/guides/gradle-test-failed-github-actions",
+      "/guides/maven-test-failed-github-actions",
+      "/guides/rust-test-failed-github-actions",
+      "/guides/go-test-failed-github-actions",
+      "/guides/cypress-failed-github-actions",
+      "/guides/playwright-failed-github-actions",
+      "/guides/vitest-failed-github-actions",
+      "/guides/jest-failed-github-actions",
+      "/guides/npm-test-failed-github-actions",
+      "/guides/typescript-failed-github-actions",
+      "/guides/eslint-failed-github-actions",
+      "/guides/pytest-failed-github-actions",
+      "/guides/explain-github-actions-failure",
+    ]) {
+      expect(links.some((link) => link.href === href)).toBe(true);
+    }
+    const related = otherGuides("rspec-failed-github-actions").map((item) => item.slug);
+    expect(related).toEqual(
+      expect.arrayContaining([
+        "phpunit-failed-github-actions",
+        "gradle-test-failed-github-actions",
+        "maven-test-failed-github-actions",
+        "rust-test-failed-github-actions",
+        "go-test-failed-github-actions",
+        "cypress-failed-github-actions",
+        "playwright-failed-github-actions",
+        "vitest-failed-github-actions",
+        "jest-failed-github-actions",
+        "npm-test-failed-github-actions",
+        "typescript-failed-github-actions",
+        "eslint-failed-github-actions",
+        "pytest-failed-github-actions",
+        "install-github-action-failure-teaser",
+        "explain-github-actions-failure",
+      ]),
+    );
+    expect(related).not.toContain("rspec-failed-github-actions");
     expect(GUIDES.at(-1)?.slug).toBe("install-github-action-failure-teaser");
   });
 });

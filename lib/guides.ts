@@ -2815,6 +2815,333 @@ vendor/bin/phpunit --fail-on-deprecation --process-isolation`,
     ],
   },
   {
+    slug: "rspec-failed-github-actions",
+    path: "/guides/rspec-failed-github-actions",
+    title: "RSpec failed in GitHub Actions",
+    description:
+      "How to read a red bundle exec rspec or bin/rspec step in GitHub Actions: distinguish a bundle install, Gemfile.lock, ruby/setup-ruby, native extension, load error, database, Spring, or coverage failure from a real Failure/Error, and ignore Process completed with exit code 1.",
+    eyebrow: "bundle exec rspec · Ruby · Bundler",
+    lede:
+      "When RSpec fails in GitHub Actions, the last line is almost always Process completed with exit code 1. That is a wrapper. The cause is the first real error — a bundle install that did not finish, a Gemfile.lock or Ruby mismatch, a native extension, a file that failed to load, a database or Spring problem, a coverage gate, or a real Failure/Error with expected and got.",
+    keywords: [
+      "rspec failed GitHub Actions",
+      "bundle exec rspec Process completed with exit code 1",
+      "4 examples, 1 failure",
+      "bundle install / Gemfile.lock drift",
+      "ruby/setup-ruby / native extension",
+    ],
+    updatedAt: "2026-10-02",
+    sections: [
+      {
+        heading: "Start at the first error, not exit code 1",
+        paragraphs: [
+          "A red bundle exec rspec or bin/rspec step almost always ends with Process completed with exit code 1. Ignore that wrapper line. RSpec exits 1 when an example fails. A load error (An error occurred while loading) also exits 1 unless error_exit_code is set. Bundler uses its own codes, and GitHub prints those instead: exit 5 when a gem fails to install, exit 6 on a version conflict, exit 7 when a gem is missing from the bundle, exit 16 when frozen mode refuses to rewrite Gemfile.lock, exit 18 when the Ruby version does not match the Gemfile, and exit 127 when bundler: command not found: rspec. Scroll up in the failing step to the first Failures:, Failure/Error:, expected:, got:, Failed examples:, An error occurred while loading, 1 error occurred outside of examples, Could not find compatible versions, version solving has failed, Your Ruby version is, Could not find rspec-core, An error occurred while installing, PG::ConnectionBad, or Line coverage. That sentence is the diagnosis you are trying to name.",
+          "RSpec does not print Jest's FAIL path or Test Suites: line, Vitest's RUN  v banner, Playwright's Running N tests using M workers, Cypress's Running: spec.cy.js, Go's --- FAIL:, Cargo's test result: FAILED, Maven's <<< FAILURE!, Gradle's Execution failed for task ':test', or PHPUnit's FAILURES!. A real RSpec 3 log prints Randomized with seed when order is random, then a progress line such as .F.., then Failures:, then the example name and Failure/Error: with expected: 18 and got: 20, then Finished in and 4 examples, 1 failure, then Failed examples: and a line that starts with rspec ./spec/…. 4 examples, 1 failure is the summary, not the cause. If you never see an examples count, RSpec did not grade the suite. The PHPUnit guide is the same split for PHP; this page is bundle exec rspec, bin/rspec, and the example.",
+        ],
+        list: [
+          "Search the raw job log for Failures:, Failure/Error:, expected:, got:, Failed examples:, An error occurred while loading, error occurred outside of examples, Could not find compatible versions, version solving has failed, Your Ruby version is, Could not find rspec-core, An error occurred while installing, frozen mode is set, PG::ConnectionBad, Line coverage, and ##[error].",
+          "Quote the first of those lines — do not paraphrase the wrapper Process completed with exit code 1, and do not stop at 4 examples, 1 failure.",
+          "If the first error is in ruby/setup-ruby or bundle install, or the log stops before any examples count, bundle exec rspec never graded your suite. Treat that as a Ruby, Bundler, or native-extension failure.",
+        ],
+      },
+      {
+        heading: "Common RSpec CI failures",
+        paragraphs: [
+          "After bundle install succeeded and the binstubs were written, the first red block is one of a short list. Rank it in this order. A Bundler or Ruby failure happens before the RSpec banner. A load error happens as RSpec starts and prints An error occurred while loading with 0 examples, 0 failures, 1 error occurred outside of examples. A before(:suite) hook that cannot reach Postgres, or a pending migration, dies the same way: no example asserted. A Failure/Error: line under Failures: means that example ran. The pytest guide is the same split for Python; this page is RSpec 3, the spec file, and the example.",
+          "bundle exec rspec runs the rspec executable from the bundle. bin/rspec is the binstub Bundler generates; it boots Bundler and then RSpec. bundler: command not found: rspec means the rspec gem is not in this group, almost always because BUNDLE_WITHOUT=development:test omitted it, or because install never finished. A workflow that runs rspec with no bundle exec uses whatever rspec is on the image, which is a different version than Gemfile.lock.",
+          "RSpec 3 prints the same expectation shape for eq and eql. Failure/Error: is followed by expected: 18, got: 20, and (compared using ==). An unexpected exception is still under Failures: — RSpec does not have PHPUnit's separate ERRORS! count — and the next line is the class, such as NoMethodError: or NameError:. The summary is N examples, M failures. Several examples produce 4 examples, 2 failures. The Failed examples: list at the bottom is the rerun command, rspec ./spec/billing_spec.rb:18, plus the example name. Neither the summary nor that list is the cause. The Failure/Error: block above them is.",
+          "A few outcomes look like assertion failures and are not. An error occurred while loading ./spec/billing_spec.rb with LoadError: cannot load such file means the file never defined an example. Run options: include {:focus=>true} means a fit, fdescribe, or focus: true metadata filtered the suite down to the tagged examples; the rest never ran, and the job can still be green. Randomized with seed 48291 means this run shuffled examples. A failure that only appears on that seed is order-dependent. Line coverage (88.12%) is below the expected minimum coverage (90.00%). and SimpleCov failed with exit 2 due to a coverage related error mean the examples passed and SimpleCov aborted afterward. Pending examples print N examples, 0 failures, 1 pending and do not fail the process unless the suite sets fail_on_pending or passes --fail-on-pending.",
+        ],
+        list: [
+          "Real expectation: Failures:, then 1) Billing#apply_discount applies the summer coupon, then Failure/Error: expect(Billing.apply_discount(20)).to eq(18), then expected: 18 and got: 20, then 4 examples, 1 failure and Failed examples:. The example ran. Open that line.",
+          "Several examples: 4 examples, 2 failures. Same family. Read the first numbered Failure/Error:.",
+          "Unexpected exception: Failure/Error: followed by NoMethodError: or NameError:, still under Failures: and still counted as 1 failure. The example started. It is still an RSpec result, not a Bundler failure.",
+          "Load error: An error occurred while loading ./spec/billing_spec.rb and 0 examples, 0 failures, 1 error occurred outside of examples. Nothing asserted. Fix the require or the constant before you read any later example.",
+          "Suite hook: An error occurred in a `before(:suite)` hook with ActiveRecord::PendingMigrationError or PG::ConnectionBad. The examples did not run.",
+          "Focus filter: Run options: include {:focus=>true} and a tiny example count. Remove fit, fdescribe, and focus: true. This is not an assertion.",
+          "Coverage: the summary says 0 failures, then Line coverage (88.12%) is below the expected minimum coverage (90.00%). and SimpleCov failed with exit 2. The specs passed. The coverage gate failed.",
+          "No examples: No examples found. The path, the --tag filter, or --only-failures matched nothing. Nothing asserted.",
+        ],
+        code: {
+          label: "RSpec failure log excerpt",
+          content: `Randomized with seed 48291
+
+.F..
+
+Failures:
+
+  1) Billing#apply_discount applies the summer coupon
+     Failure/Error: expect(Billing.apply_discount(20)).to eq(18)
+
+       expected: 18
+            got: 20
+
+       (compared using ==)
+     # ./spec/billing_spec.rb:21:in \`block (3 levels) in <top (required)>'
+
+Finished in 0.04123 seconds (files took 1.02 seconds to load)
+4 examples, 1 failure
+
+Failed examples:
+
+rspec ./spec/billing_spec.rb:18 # Billing#apply_discount applies the summer coupon
+
+Randomized with seed 48291
+
+##[error]Process completed with exit code 1`,
+        },
+      },
+      {
+        heading: "Bundler, Ruby, load errors, and the database versus a real Failure/Error",
+        paragraphs: [
+          "A broken bundle install and a failing example look the same in the Checks UI: a red job and an exit code. They are not the same failure. Could not find compatible versions, version solving has failed, Your Ruby version is 3.2.4, but your Gemfile specified 3.3.6, Could not find rspec-core-3.13.2 in any of the sources, An error occurred while installing pg, frozen mode is set, and bundler: command not found: rspec mean RSpec never reached an example. An error occurred while loading and 1 error occurred outside of examples mean RSpec started and stopped before the suite. PG::ConnectionBad and ActiveRecord::PendingMigrationError in a before(:suite) hook mean the runtime died before examples. Failure/Error: with expected: and got:, after Failures:, means an example ran. If a Bundler error and a Failures: banner both appear in one paste, rank the earlier step first.",
+          "ruby/setup-ruby selects the interpreter before Bundler. A red setup step — an unknown Ruby version, or a .ruby-version the runner image does not publish — means bundle install and rspec never started. When the step is green, read its ruby-version and bundler-cache anyway. The Gemfile ruby directive is checked by Bundler, not by the action. A workflow that pins ruby-version: \"3.2\" while the Gemfile says ruby \"3.3.6\" fails with Your Ruby version is 3.2.4, but your Gemfile specified 3.3.6 and exit 18. ubuntu-latest does not provide a project Ruby until setup-ruby runs. A workflow that skips that action uses whatever ruby is on the image, and that binary moves when GitHub bumps the runner. Match the version to .ruby-version, and pass bundler-cache: true only when Gemfile.lock is committed.",
+          "Native extensions are the other install gate. pg, mysql2, nokogiri, and grpc compile on the runner. An error occurred while installing pg (1.5.9), and Bundler cannot continue. followed by Can't find the 'libpq-fe.h header means the image is missing the client headers. apt-get install -y libpq-dev before bundle install, and keep that package on the same step as the compile. Exit code 5 is that install failure. A cache of vendor/bundle built on another Ruby, or restored without the headers, fails the same way on the next miss that actually compiles. bundler-cache: true on ruby/setup-ruby keys the cache from the lockfile and the Ruby version. A cache miss only slows the job. Do not treat the miss itself as the root cause of a Failure/Error:.",
+          "Gemfile.lock and groups are the freeze gate. ruby/setup-ruby with bundler-cache installs in frozen mode. The dependencies in your gemfile changed, but the lockfile can't be updated because frozen mode is set means Gemfile moved and Gemfile.lock was not committed. Run bundle install on a laptop and commit the lockfile. Do not delete Gemfile.lock to silence it. Could not find rspec-core-3.13.2 in any of the sources means the install step did not run, or BUNDLE_WITHOUT dropped the rspec group. bundle exec then prints bundler: failed to load command: rspec above that line. bundler: command not found: rspec, followed by Install missing gem executables with bundle install, is the same family and exits 127. Could not find compatible versions and version solving has failed are a solver conflict (exit 6). Older Bundler printed the same conflict as Bundler could not find compatible versions for gem. The Gemfile asks for two constraints that cannot both be true. No examples ran.",
+          "Load errors, the database, Spring, and CI=true are the runtime gates that look like test failures. LoadError: cannot load such file -- billing, or Zeitwerk::NameError: expected file …/app/models/billing.rb to define constant Billing, means a require or an autoload failed. Rails sets config.eager_load = ENV[\"CI\"].present? in many test.rb files. GitHub Actions sets CI=true for every step, so the runner eager-loads and the laptop, where CI is unset, does not. That is why the same spec is green locally and red on ubuntu-latest. PG::ConnectionBad: connection to server on socket \"/var/run/postgresql/.s.PGSQL.5432\" failed means database.yml is using a local socket while the workflow's Postgres service listens on TCP. Point the test host at 127.0.0.1 and the published port, and wait for the service health check before rspec. ActiveRecord::PendingMigrationError means db:schema:load or db:test:prepare never ran. bin/rspec loads Spring when the gem is in the bundle. Spring on a runner hangs until the step times out, or serves a stale load path. DISABLE_SPRING=1 bundle exec rspec matches what CI should run. A committed spec/examples.txt plus --only-failures in .rspec runs a subset and can print All examples were filtered out. That is a filter, not an assertion.",
+        ],
+        list: [
+          "setup-ruby: the setup step is red, or Bundler says Your Ruby version is 3.2.4, but your Gemfile specified 3.3.6. Set ruby-version to the Gemfile and .ruby-version. Exit 18 means RSpec never started.",
+          "Native extension: An error occurred while installing pg and Can't find the 'libpq-fe.h header. Install the -dev package, then bundle install. Exit 5 is the compiler, not an example.",
+          "Lockfile: frozen mode is set. Commit the updated Gemfile.lock. Could not find rspec-core and bundler: command not found: rspec mean the gem is not installed. Exit 7 and exit 127 are that miss.",
+          "Solver: Could not find compatible versions and version solving has failed. Exit 6. Older logs say Bundler could not find compatible versions for gem. Loosen or align the Gemfile constraints and commit a fresh lockfile. No example ran.",
+          "Load: An error occurred while loading and 1 error occurred outside of examples, or Zeitwerk::NameError. Fix the require or the constant. CI=true eager-loads on the runner even when your laptop does not.",
+          "Database: PG::ConnectionBad or ActiveRecord::PendingMigrationError in a before(:suite) hook. Use the service host and port, and load the schema before rspec.",
+          "Spring and filters: DISABLE_SPRING=1. Run options: include {:focus=>true} means a focused example was committed. --only-failures with a persisted examples file skips the suite.",
+          "Coverage: Line coverage (88.12%) is below the expected minimum coverage (90.00%). and SimpleCov failed with exit 2, after 0 failures. Raise coverage or lower the gate on purpose.",
+          "Example: Failures:, Failure/Error:, expected: 18, got: 20, 4 examples, 1 failure, and Failed examples:. Re-run that file and line.",
+        ],
+        code: {
+          label: "Same wrapper family, different first errors",
+          content: `# Ruby version — RSpec never started
+Your Ruby version is 3.2.4, but your Gemfile specified 3.3.6
+##[error]Process completed with exit code 18
+
+# Version conflict — RSpec never started
+Could not find compatible versions
+
+Because rspec-rails >= 7.1.0 depends on rspec-core ~> 3.13
+  and Gemfile depends on rspec-rails ~> 7.1,
+  rspec-core ~> 3.13 is required.
+So, because Gemfile depends on rspec ~> 3.12
+  which depends on rspec-core = 3.12.0,
+  version solving has failed.
+##[error]Process completed with exit code 6
+
+# Gem missing — install never finished
+Could not find rspec-core-3.13.2 in any of the sources
+##[error]Process completed with exit code 7
+
+# bundle exec — the binstub exists, the gem does not
+bundler: failed to load command: rspec (/home/runner/work/checkout/checkout/vendor/bundle/ruby/3.3.0/bin/rspec)
+Bundler::GemNotFound: Could not find rspec-core-3.13.2 in any of the sources
+##[error]Process completed with exit code 1
+
+# Frozen lockfile — Gemfile moved without Gemfile.lock
+The dependencies in your gemfile changed, but the lockfile can't be updated because frozen mode is set
+
+You have added to the Gemfile:
+* rspec-rails (~> 7.1)
+
+Run \`bundle install\` elsewhere and add the updated Gemfile.lock to version control.
+##[error]Process completed with exit code 16
+
+# Native extension — pg headers are not on the image
+Gem::Ext::BuildError: ERROR: Failed to build gem native extension.
+Can't find the 'libpq-fe.h header
+An error occurred while installing pg (1.5.9), and Bundler cannot continue.
+##[error]Process completed with exit code 5
+
+# binstub — rspec is not in this bundle
+bundler: command not found: rspec
+Install missing gem executables with \`bundle install\`
+##[error]Process completed with exit code 127
+
+# Load error — no example ran
+An error occurred while loading ./spec/billing_spec.rb.
+Failure/Error: require "billing"
+
+LoadError:
+  cannot load such file -- billing
+0 examples, 0 failures, 1 error occurred outside of examples
+##[error]Process completed with exit code 1
+
+# Database socket — before(:suite), no example ran
+An error occurred in a \`before(:suite)\` hook.
+Failure/Error: ActiveRecord::Migration.maintain_test_schema!
+
+PG::ConnectionBad:
+  connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: No such file or directory
+          Is the server running locally and accepting connections on that socket?
+##[error]Process completed with exit code 1
+
+# Pending migration — schema was not loaded
+ActiveRecord::PendingMigrationError:
+  Migrations are pending. To resolve this issue, run:
+          bin/rails db:migrate
+##[error]Process completed with exit code 1
+
+# Eager load — CI=true only
+Zeitwerk::NameError:
+  expected file /home/runner/work/checkout/checkout/app/models/billing.rb to define constant Billing
+##[error]Process completed with exit code 1
+
+# Coverage gate — examples passed
+4 examples, 0 failures
+Line coverage (88.12%) is below the expected minimum coverage (90.00%).
+SimpleCov failed with exit 2 due to a coverage related error
+##[error]Process completed with exit code 2
+
+# Real example — the spec ran and the expectation failed
+Failures:
+
+  1) Billing#apply_discount applies the summer coupon
+     Failure/Error: expect(Billing.apply_discount(20)).to eq(18)
+
+       expected: 18
+            got: 20
+
+       (compared using ==)
+
+4 examples, 1 failure
+
+Failed examples:
+
+rspec ./spec/billing_spec.rb:18 # Billing#apply_discount applies the summer coupon
+##[error]Process completed with exit code 1`,
+        },
+      },
+      {
+        heading: "Reproduce with the same CI command",
+        paragraphs: [
+          "A laptop that already has a warm vendor/bundle, a different Ruby than .ruby-version, Spring running, and CI unset is not the CI gate. Match the runner: the same ruby-version as ruby/setup-ruby (read it from that step, or from .ruby-version when the workflow does not override it), then the exact install and the exact test command. If CI runs bundle install and then bundle exec rspec, run that — not a global rspec, and not bundle install --without test.",
+          "Pass the same flags and the same seed. bundle exec rspec and bin/rspec can differ when .rspec adds --require spec_helper, --tag, or --only-failures. The Failed examples: line is the rerun: bundle exec rspec ./spec/billing_spec.rb:18. When the log says Randomized with seed 48291, add --seed 48291. In a monorepo, run from the directory that contains the Gemfile the workflow uses. Export DISABLE_SPRING=1. Export CI=true if you want the eager-load path the runner uses. A Postgres service in the workflow is part of the command: the same DATABASE_URL, host, and port.",
+        ],
+        list: [
+          "Ruby: install the version from setup-ruby. Confirm with ruby -v and bundle -v. The Gemfile ruby line must match.",
+          "Install: bundle install. Do not pass --without test unless CI does. Commit Gemfile.lock. Install libpq-dev (or the matching client headers) before the install if CI does.",
+          "Test: DISABLE_SPRING=1 bundle exec rspec. If CI runs bin/rspec, run DISABLE_SPRING=1 bin/rspec. One example: DISABLE_SPRING=1 bundle exec rspec ./spec/billing_spec.rb:18.",
+          "Seed and env: add --seed 48291 when the log printed that seed. Export CI=true and the same DATABASE_URL the workflow exports. Drop --only-failures unless CI passes it.",
+        ],
+        code: {
+          label: "Same commands the runner used",
+          content: `ruby -v
+bundle -v
+bundle install
+DISABLE_SPRING=1 bundle exec rspec
+# or, when CI uses the binstub:
+DISABLE_SPRING=1 bin/rspec
+# the Failed examples: line, with the seed from the log:
+DISABLE_SPRING=1 bundle exec rspec ./spec/billing_spec.rb:18 --seed 48291
+# only if CI set these:
+CI=true DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/checkout_test DISABLE_SPRING=1 bundle exec rspec`,
+        },
+      },
+      {
+        heading: "Paste the log when the first error is still unclear",
+        paragraphs: [
+          "If the log is long or the first error is buried under gem download noise, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
+        ],
+        links: [
+          { href: "/analyze", label: "Paste a log on CauseCI" },
+          {
+            href: ACTION_INSTALL_PATH,
+            label: "Optional: install the failure-teaser Action",
+          },
+          { href: "/guides", label: "All CI failure guides" },
+          {
+            href: "/guides/phpunit-failed-github-actions",
+            label: "PHPUnit test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/gradle-test-failed-github-actions",
+            label: "Gradle / JUnit test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/maven-test-failed-github-actions",
+            label: "Maven / Surefire test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/rust-test-failed-github-actions",
+            label: "Rust cargo test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/go-test-failed-github-actions",
+            label: "Go test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/cypress-failed-github-actions",
+            label: "Cypress failed in GitHub Actions",
+          },
+          {
+            href: "/guides/playwright-failed-github-actions",
+            label: "Playwright failed in GitHub Actions",
+          },
+          {
+            href: "/guides/vitest-failed-github-actions",
+            label: "Vitest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/jest-failed-github-actions",
+            label: "Jest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/npm-test-failed-github-actions",
+            label: "npm test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/typescript-failed-github-actions",
+            label: "TypeScript / tsc failed in GitHub Actions",
+          },
+          {
+            href: "/guides/eslint-failed-github-actions",
+            label: "ESLint failed in GitHub Actions",
+          },
+          {
+            href: "/guides/pytest-failed-github-actions",
+            label: "pytest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/explain-github-actions-failure",
+            label: "Explain this GitHub Actions failure",
+          },
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question:
+          "Why does GitHub say Process completed with exit code 1 after RSpec?",
+        answer:
+          "That line is a wrapper. RSpec exits 1 when an example fails, so the phrase bundle exec rspec Process completed with exit code 1 is not the diagnosis. 4 examples, 1 failure is the summary under it. A Bundler failure is often a different code: exit 6 for a version conflict, exit 7 when a gem is missing, exit 5 for a native extension, exit 16 for frozen mode, exit 18 when the Ruby version does not match, and exit 127 for bundler: command not found: rspec. Scroll up to the first Failure/Error:, expected:, An error occurred while loading, Could not find compatible versions, version solving has failed, or Could not find rspec-core — that is the cause.",
+      },
+      {
+        question:
+          "How do I tell a bundle install, Ruby, native extension, load error, or database failure from a real Failure/Error?",
+        answer:
+          "If ruby/setup-ruby is red, or the log prints Your Ruby version is 3.2.4, but your Gemfile specified 3.3.6, Could not find compatible versions, version solving has failed, Could not find rspec-core, frozen mode is set, An error occurred while installing pg, or bundler: command not found: rspec, RSpec never graded the suite. An error occurred while loading and 1 error occurred outside of examples, plus PG::ConnectionBad, ActiveRecord::PendingMigrationError, and Zeitwerk::NameError, mean the suite stopped before an example assertion. Line coverage (88.12%) is below the expected minimum coverage (90.00%). with SimpleCov failed with exit 2 means the examples passed and coverage failed the job. A real failure shows Failures:, Failure/Error:, expected: 18, got: 20, 4 examples, 1 failure, and Failed examples:.",
+      },
+      {
+        question: "Why do RSpec examples pass locally and fail in GitHub Actions?",
+        answer:
+          "The laptop often has a different Ruby than ruby/setup-ruby, a warm vendor/bundle, Spring already running, and CI unset. ubuntu-latest uses the setup-ruby version, installs from Gemfile.lock in frozen mode, and sets CI=true, so config.eager_load runs and a Zeitwerk::NameError appears only on the runner. A Postgres service listens on TCP while database.yml still uses a local socket, so PG::ConnectionBad is CI-only. Randomized with seed 48291 runs examples in an order the laptop did not. A fit or focus: true left in the file, or --only-failures with spec/examples.txt, runs a different set than a full local rspec.",
+      },
+      {
+        question:
+          "What does 4 examples, 1 failure mean compared with Could not find compatible versions?",
+        answer:
+          "Could not find compatible versions, version solving has failed, Could not find rspec-core, frozen mode is set, and An error occurred while installing pg mean Bundler stopped during install. Older Bundler printed that conflict as Bundler could not find compatible versions for gem. No example ran, so there is no Failures: banner and no examples count. An error occurred while loading and 0 examples, 0 failures, 1 error occurred outside of examples are the same split one step later: RSpec stopped, and the suite did not run. 4 examples, 1 failure together with Failure/Error: and expected: / got: means the example ran. Failed examples: is the rerun line. Fix the first one you see.",
+      },
+      {
+        question:
+          "Do I need to install a GitHub Action to explain rspec failed GitHub Actions?",
+        answer:
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+      },
+    ],
+  },
+  {
     slug: ACTION_INSTALL_SLUG,
     path: ACTION_INSTALL_PATH,
     title: "Install the CauseCI GitHub Action",
