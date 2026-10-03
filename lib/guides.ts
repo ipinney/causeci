@@ -3142,6 +3142,315 @@ CI=true DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/checkout_test D
     ],
   },
   {
+    slug: "dotnet-test-failed-github-actions",
+    path: "/guides/dotnet-test-failed-github-actions",
+    title: "dotnet test failed in GitHub Actions",
+    description:
+      "How to read a red dotnet test step in GitHub Actions: distinguish a missing SDK, global.json, NuGet restore, lock file, build, or filter/trait miss from a real xUnit, NUnit, or MSTest failure, and ignore Process completed with exit code 1.",
+    eyebrow: "dotnet test · xUnit · NUnit · MSTest",
+    lede:
+      "When dotnet test fails in GitHub Actions, the last line is almost always Process completed with exit code 1. That is a wrapper. The cause is the first real error — an SDK global.json cannot resolve, a NuGet restore that did not finish, a build error, a filter or trait that matched nothing, or a real assertion with Expected and Actual.",
+    keywords: [
+      "dotnet test failed GitHub Actions",
+      "dotnet test Process completed with exit code 1",
+      "Failed! Failed: 1, Passed: 3",
+      "NU1101 / NU1301 / packages.lock.json",
+      "actions/setup-dotnet / global.json exit code 145",
+    ],
+    updatedAt: "2026-10-03",
+    sections: [
+      {
+        heading: "Start at the first error, not exit code 1",
+        paragraphs: [
+          "A red dotnet test step almost always ends with Process completed with exit code 1. Ignore that wrapper line. On the VSTest runner that dotnet test still uses for most xUnit v2, NUnit, and MSTest projects, exit 1 means a test failed or MSBuild failed. Those are different failures that share a code. Microsoft.Testing.Platform, which xUnit v3 and current MSTest can host, exits 2 when at least one test failed and 8 when the session ran zero tests. The dotnet muxer exits 145 when global.json names an SDK that is not installed, and the shell exits 127 on dotnet: command not found. Scroll up in the failing step to the first Failed , Assert.Equal() Failure, Assert.AreEqual failed, But was:, error NU1101, error NU1301, error NU1004, error NETSDK1045, error NETSDK1147, error CS, A compatible .NET SDK was not found, No test matches the given testcase filter, No test is available, or ##[error]. That sentence is the diagnosis you are trying to name.",
+          "dotnet test does not print RSpec's Failure/Error:, PHPUnit's FAILURES!, Jest's FAIL path, Go's --- FAIL:, or Cargo's test result: FAILED. A real VSTest log prints Starting test execution, please wait..., then A total of 1 test files matched the specified pattern., then the failed test name, an Error Message:, and a Stack Trace:, then Failed!  - Failed:     1, Passed:     3, Skipped:     0, Total:     4. Failed! is the summary, not the cause. If you never see Starting test execution or an MTP failed line, the suite did not run. The RSpec guide is the same split for Ruby; this page is dotnet test, the test project, and the assertion.",
+        ],
+        list: [
+          "Search the raw job log for Failed , Assert.Equal() Failure, Assert.AreEqual failed, But was:, error NU1101, error NU1301, error NU1004, error NETSDK1045, error NETSDK1147, error CS, A compatible .NET SDK was not found, No test matches the given testcase filter, No test is available, and ##[error].",
+          "Quote the first of those lines — do not paraphrase the wrapper Process completed with exit code 1, and do not stop at Failed!  - Failed:     1.",
+          "If the first error is in actions/setup-dotnet, or the log stops on a NU, NETSDK, or CS line before Starting test execution, dotnet test never graded the suite. Treat that as an SDK, restore, or build failure.",
+        ],
+      },
+      {
+        heading: "Common dotnet test CI failures",
+        paragraphs: [
+          "After restore and build succeeded, the first red block is one of a short list. Rank it in this order. An SDK or NuGet failure happens before Starting test execution. A compiler error (error CS) happens in the implicit build dotnet test runs, and no test method ran. A discovery miss — No test is available, or No test matches the given testcase filter — means the runner started and selected nothing. An Error Message: under a Failed test name means that method ran. The pytest guide is the same split for Python; this page is dotnet test, xUnit, NUnit, MSTest, and the assertion.",
+          "dotnet test restores, builds, and then runs the test host unless the workflow passes --no-restore or --no-build. The test project is the csproj that references a framework and an adapter. xUnit v2 needs xunit and xunit.runner.visualstudio plus Microsoft.NET.Test.Sdk. NUnit needs NUnit and NUnit3TestAdapter. MSTest needs MSTest.TestFramework and MSTest.TestAdapter. Without the adapter package, the build can succeed and the log prints No test is available in …/Billing.Tests.dll. Make sure that test discoverer & executors are registered and platform & framework version settings are appropriate and try again. VSTest then exits 0. The job is green and nothing asserted.",
+          "The three frameworks do not share an assertion sentence. xUnit v2 prints Assert.Equal() Failure, then Expected: 18 and Actual:   20. NUnit prints Expected: 18 and But was:  20 under Assert.That. MSTest prints Assert.AreEqual failed. Expected:<18>. Actual:<20>. All three still sit under a Failed test name and a VSTest summary of Failed!  - Failed:     1, Passed:     3, Skipped:     0, Total:     4. An unexpected exception is the same shape: the Error Message: is the exception type, and it still counts as Failed: 1. It is a test result, not a restore failure. xUnit v3 on Microsoft.Testing.Platform prints failed and the same Expected / Actual pair, and the process exits 2, so GitHub shows Process completed with exit code 2.",
+          "A few outcomes look like assertion failures and are not. No test matches the given testcase filter `Category=Integration` means the --filter expression selected nothing. No test is available means discovery registered no tests in that dll. Both can leave Failed: 0. On VSTest the process often still exits 0, so the check is green. On Microsoft.Testing.Platform a session that ran zero tests exits 8 (Process completed with exit code 8). --minimum-expected-tests that the run does not meet exits 9. A Coverlet Threshold that is missed prints Passed! and then The total line coverage is below the specified 80. The tests passed. The coverage gate failed the MSBuild target.",
+        ],
+        list: [
+          "Real xUnit assertion: Failed Billing.Tests.BillingTests.ApplyDiscount_AppliesSummerCoupon, then Assert.Equal() Failure, Expected: 18, Actual:   20, then Failed!  - Failed:     1, Passed:     3. The method ran. Open that line.",
+          "Real NUnit assertion: the same Failed name, then Expected: 18 and But was:  20. Same family. Read the first Failed method.",
+          "Real MSTest assertion: Assert.AreEqual failed. Expected:<18>. Actual:<20>. Still under Failed and still counted in Failed: 1.",
+          "Unexpected exception: Error Message: followed by NullReferenceException or FileNotFoundException, still under Failed. The test started. It is still a test result, not an NU1101.",
+          "Filter miss: No test matches the given testcase filter. Nothing asserted. On VSTest the exit code is often 0. On MTP it is 8.",
+          "No adapter: No test is available in …/Billing.Tests.dll and the discoverer sentence. Add xunit.runner.visualstudio, NUnit3TestAdapter, or MSTest.TestAdapter. The build did not fail.",
+          "Coverage: Passed! with Failed: 0, then The total line coverage is below the specified 80. Raise coverage or lower the Threshold on purpose.",
+          "MTP assertion: a line that starts with failed, Expected: 18, Actual:   20, and Process completed with exit code 2.",
+        ],
+        code: {
+          label: "dotnet test failure log excerpt",
+          content: `Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+  Failed Billing.Tests.BillingTests.ApplyDiscount_AppliesSummerCoupon [12 ms]
+  Error Message:
+   Assert.Equal() Failure
+Expected: 18
+Actual:   20
+  Stack Trace:
+     at Billing.Tests.BillingTests.ApplyDiscount_AppliesSummerCoupon() in /home/runner/work/checkout/checkout/tests/Billing.Tests/BillingTests.cs:line 21
+
+Failed!  - Failed:     1, Passed:     3, Skipped:     0, Total:     4, Duration: 41 ms - Billing.Tests.dll (net8.0)
+##[error]Process completed with exit code 1`,
+        },
+      },
+      {
+        heading: "SDK, restore, and filters versus a real assertion",
+        paragraphs: [
+          "A broken setup and a failing assertion look the same in the Checks UI: a red job and an exit code. They are not the same failure. A compatible .NET SDK was not found, error NETSDK1045, error NETSDK1147, error NU1101, error NU1301, and error NU1004 mean dotnet test never reached a test method. error CS and MSBUILD : error MSB1009 mean the build or the project path failed first. No test is available and No test matches the given testcase filter mean the host started and selected nothing. Assert.Equal() Failure, But was:, or Assert.AreEqual failed, after a Failed test name, means a method ran. If a restore error and a Failed! banner both appear in one paste, rank the earlier step first.",
+          "actions/setup-dotnet selects the SDK before restore. A red setup step — a version the action cannot download, or The specified global.json file does not exist — means dotnet test never started. When the step is green, read its dotnet-version anyway. ubuntu-latest ships an SDK, and that SDK moves when GitHub bumps the runner image. A workflow that skips setup-dotnet uses whatever dotnet is on PATH. global.json overrides that. A compatible .NET SDK was not found, Requested SDK version: 8.0.403, and Install the [8.0.403] .NET SDK or update global.json mean the muxer refused the command. That exits 145, so the log ends with Process completed with exit code 145. rollForward set to disable or patch will not accept a different feature band. Point setup-dotnet at global-json-file, or set dotnet-version to the same band as sdk.version. A workflow that installs 8.0.x while global.json pins 9.0.100 with rollForward disable still fails at dotnet test: the muxer honors global.json, not the newest SDK on PATH.",
+          "The target framework and workloads are the next gate, still before any assertion. error NETSDK1045: The current .NET SDK does not support targeting .NET 9.0. Either target .NET 8.0 or lower, or use a version of the .NET SDK that supports .NET 9.0. means the installed SDK is older than the csproj TargetFramework. Install that SDK. Do not retarget the project to silence one runner. error NETSDK1147: To build this project, the following workloads must be installed: wasm-tools, followed by dotnet workload restore, means the project needs a workload the setup step never installed. Add a dotnet workload restore step. A -f net8.0 argument against a project that only targets net9.0 fails the same way: the framework in the command and the csproj do not agree. No test ran.",
+          "NuGet is the restore gate. error NU1101: Unable to find package Contoso.Billing. No packages exist with this id in source(s): nuget.org means the package id is wrong, or a NuGet.config with <clear /> left only a source that does not have it. error NU1301: Unable to load the service index for source https://nuget.pkg.github.com/org/index.json, then Response status code does not indicate success: 401 (Unauthorized), means the private feed rejected the job. GitHub Packages wants a token with packages: read. The workflow that works on a laptop uses the developer credential in ~/.nuget/NuGet/NuGet.Config, which the runner does not have. Map the token with NUGET_AUTH_TOKEN, or run dotnet nuget add source only if CI does. error NU1004: The packages lock file is inconsistent with the project dependencies so restore can't be run in locked mode means RestoreLockedMode, or dotnet restore --locked-mode, refused to rewrite packages.lock.json. Commit the lock file from a laptop restore. Do not delete packages.lock.json to silence it. error NU1008 is the central-package sibling: a PackageReference set Version while Directory.Packages.props owns versions. No test ran.",
+          "Build flags, the working directory, and filters are the runtime gates that look like test failures. dotnet test --no-build looks for the dll the previous step produced. The test source file \"…/bin/Debug/net8.0/Billing.Tests.dll\" provided was not found means CI built -c Release and the test step assumed Debug, or the build step was skipped. Pass the same -c and the same project path. MSBUILD : error MSB1009: Project file does not exist means working-directory is not the folder that contains that csproj. In a monorepo, set it to the directory the workflow used, not the repo root you happen to have open. A --filter is framework-specific. MSTest's attribute is [TestCategory(\"Integration\")] and the property is TestCategory, so the command is dotnet test --filter TestCategory=Integration. NUnit's attribute is [Category(\"Integration\")], and the VSTest adapter exposes it as TestCategory — Microsoft's selective-tests page shows dotnet test --filter TestCategory=CategoryA for that attribute. Older NUnit3TestAdapter builds accepted TestCategory and rejected Category. xUnit's [Trait(\"Category\", \"Integration\")] is the property Category, so --filter Category=Integration is correct there and --filter TestCategory=Integration matches nothing. Copying one project's filter into the other project's workflow is why CI prints No test matches the given testcase filter while a laptop dotnet test with no filter is green. xUnit v3 does not honor the VSTest --filter expression. Use --filter-trait \"Category=Integration\", --filter-class, or --filter-method. On the MTP bridge, those flags go after --. A VSTest --filter forwarded to xUnit v3 runs zero tests and exits 8.",
+        ],
+        list: [
+          "setup-dotnet: the setup step is red, or the muxer says A compatible .NET SDK was not found and Requested SDK version: 8.0.403. Install that SDK via global-json-file. Exit 145 means dotnet test never started. dotnet: command not found is exit 127.",
+          "Target: error NETSDK1045. The SDK on PATH cannot build this TargetFramework. Install the SDK the csproj asks for. A mismatched -f flag is the same split.",
+          "Workload: error NETSDK1147 and wasm-tools. Run dotnet workload restore before dotnet test. No test method ran.",
+          "Package missing: error NU1101. Check the id and the sources left after NuGet.config <clear />. No package restored, so no test ran.",
+          "Feed auth: error NU1301 and 401 (Unauthorized) on nuget.pkg.github.com. Set packages: read and NUGET_AUTH_TOKEN. The laptop credential store is not on the runner.",
+          "Lock file: error NU1004 and packages.lock.json. RestoreLockedMode refused an update. Commit the lock file. error NU1008 means Directory.Packages.props and a PackageReference Version disagree.",
+          "Build output: The test source file …/bin/Debug/net8.0/Billing.Tests.dll provided was not found after --no-build. Use the same -c Release the build step used. MSB1009 means the working-directory does not contain the csproj.",
+          "Filter: No test matches the given testcase filter. MSTest and NUnit use TestCategory. xUnit v2 traits use the trait name, so Category=Integration. xUnit v3 uses --filter-trait. Exit 0 on VSTest and exit 8 on MTP both mean nothing asserted.",
+          "Adapter: No test is available and test discoverer & executors are registered. Add the runner package. A green job here is still a miss.",
+          "Assertion: Failed, Assert.Equal() Failure, Expected: 18, Actual:   20, or But was:  20, or Assert.AreEqual failed. Expected:<18>. Actual:<20>., then Failed!  - Failed:     1. Re-run that method.",
+        ],
+        code: {
+          label: "Same wrapper family, different first errors",
+          content: `# SDK — dotnet test never started
+A compatible .NET SDK was not found.
+
+Requested SDK version: 8.0.403
+global.json file: /home/runner/work/checkout/checkout/global.json
+
+Install the [8.0.403] .NET SDK or update [/home/runner/work/checkout/checkout/global.json] to match an installed SDK.
+##[error]Process completed with exit code 145
+
+# Target framework — build never reached the test host
+error NETSDK1045: The current .NET SDK does not support targeting .NET 9.0. Either target .NET 8.0 or lower, or use a version of the .NET SDK that supports .NET 9.0.
+##[error]Process completed with exit code 1
+
+# Workload — wasm-tools is not installed
+error NETSDK1147: To build this project, the following workloads must be installed: wasm-tools
+To install these workloads, run the following command: dotnet workload restore
+##[error]Process completed with exit code 1
+
+# Package id — restore never finished
+error NU1101: Unable to find package Contoso.Billing. No packages exist with this id in source(s): nuget.org
+##[error]Process completed with exit code 1
+
+# Private feed — 401, no tests ran
+error NU1301: Unable to load the service index for source https://nuget.pkg.github.com/org/index.json.
+error NU1301:   Response status code does not indicate success: 401 (Unauthorized).
+##[error]Process completed with exit code 1
+
+# Lock file — RestoreLockedMode refused to rewrite packages.lock.json
+error NU1004: The packages lock file is inconsistent with the project dependencies so restore can't be run in locked mode. Disable the RestoreLockedMode MSBuild property or pass an explicit --force-evaluate option to run restore to update the lock file.
+##[error]Process completed with exit code 1
+
+# --no-build looked in Debug after -c Release
+The test source file "/home/runner/work/checkout/checkout/tests/Billing.Tests/bin/Debug/net8.0/Billing.Tests.dll" provided was not found.
+##[error]Process completed with exit code 1
+
+# Working directory — the csproj path is wrong
+MSBUILD : error MSB1009: Project file does not exist.
+Switch: tests/Billing.Tests/Billing.Tests.csproj
+##[error]Process completed with exit code 1
+
+# Filter — xUnit trait filter run against NUnit or MSTest, nothing selected
+No test matches the given testcase filter \`Category=Integration\` in /home/runner/work/checkout/checkout/tests/Billing.Tests/bin/Release/net8.0/Billing.Tests.dll
+##[error]Process completed with exit code 0
+
+# Adapter package missing — discovery registered nothing
+No test is available in /home/runner/work/checkout/checkout/tests/Billing.Tests/bin/Release/net8.0/Billing.Tests.dll. Make sure that test discoverer & executors are registered and platform & framework version settings are appropriate and try again.
+
+# MTP — the filter matched nothing
+##[error]Process completed with exit code 8
+
+# Coverage gate — tests passed
+Passed!  - Failed:     0, Passed:     4, Skipped:     0, Total:     4, Duration: 38 ms - Billing.Tests.dll (net8.0)
+The total line coverage is below the specified 80
+##[error]Process completed with exit code 1
+
+# Real xUnit assertion — the method ran
+  Failed Billing.Tests.BillingTests.ApplyDiscount_AppliesSummerCoupon [12 ms]
+  Error Message:
+   Assert.Equal() Failure
+Expected: 18
+Actual:   20
+Failed!  - Failed:     1, Passed:     3, Skipped:     0, Total:     4, Duration: 41 ms - Billing.Tests.dll (net8.0)
+##[error]Process completed with exit code 1
+
+# Real NUnit assertion
+  Expected: 18
+  But was:  20
+##[error]Process completed with exit code 1
+
+# Real MSTest assertion
+Assert.AreEqual failed. Expected:<18>. Actual:<20>.
+##[error]Process completed with exit code 1
+
+# xUnit v3 / Microsoft.Testing.Platform — test failure is exit 2
+failed Billing.Tests.BillingTests.ApplyDiscount_AppliesSummerCoupon (12ms)
+  Assert.Equal() Failure
+Expected: 18
+Actual:   20
+##[error]Process completed with exit code 2`,
+        },
+      },
+      {
+        heading: "Reproduce with the same CI command",
+        paragraphs: [
+          "A laptop that already has the SDK from global.json, a warm ~/.nuget cache, a NuGet.config credential, and no --filter is not the CI gate. Match the runner: the same SDK as actions/setup-dotnet (read it from that step, or from global.json when the workflow uses global-json-file), then the exact restore and the exact test command. If CI runs dotnet test -c Release --no-build, run that — not a Debug build, and not a filter you added while debugging.",
+          "Pass the same project path and the same working directory. dotnet test with no arguments uses the csproj or sln in the current directory. A monorepo step that sets working-directory: services/billing must be run from services/billing. Quote filters. dotnet test --filter FullyQualifiedName~BillingTests.ApplyDiscount_AppliesSummerCoupon reruns one method on VSTest. For xUnit v3, rerun with --filter-method or --filter-class, not the VSTest --filter expression. Export NUGET_AUTH_TOKEN if the restore step needs the private feed. A workload step in the workflow is part of the command: run dotnet workload restore before dotnet test when CI does.",
+        ],
+        list: [
+          "SDK: install the version from setup-dotnet. Confirm with dotnet --version. global.json must resolve. If it does not, you get exit 145 before any test.",
+          "Restore: dotnet restore. Add --locked-mode only if CI does. Commit packages.lock.json. Authenticate the same feeds CI authenticates.",
+          "Test: dotnet test -c Release. If CI passes --no-build, build with that configuration first. One method: dotnet test --filter FullyQualifiedName~BillingTests.ApplyDiscount_AppliesSummerCoupon.",
+          "Traits: MSTest and NUnit use --filter TestCategory=Integration. xUnit v2 uses --filter Category=Integration. xUnit v3 uses --filter-trait Category=Integration. Drop the filter unless CI passes it.",
+        ],
+        code: {
+          label: "Same commands the runner used",
+          content: `dotnet --version
+dotnet restore
+dotnet test -c Release
+# or, when CI builds first and then tests without rebuilding:
+dotnet build -c Release --no-restore
+dotnet test -c Release --no-build --no-restore
+# one VSTest method:
+dotnet test -c Release --filter "FullyQualifiedName~BillingTests.ApplyDiscount_AppliesSummerCoupon"
+# MSTest or NUnit category:
+dotnet test --filter "TestCategory=Integration"
+# xUnit v2 trait:
+dotnet test --filter "Category=Integration"
+# xUnit v3 on Microsoft.Testing.Platform:
+dotnet test --filter-trait "Category=Integration"
+# only if CI set these:
+dotnet workload restore
+dotnet restore --locked-mode`,
+        },
+      },
+      {
+        heading: "Paste the log when the first error is still unclear",
+        paragraphs: [
+          "If the log is long or the first error is buried under NuGet download noise, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
+        ],
+        links: [
+          { href: "/analyze", label: "Paste a log on CauseCI" },
+          {
+            href: ACTION_INSTALL_PATH,
+            label: "Optional: install the failure-teaser Action",
+          },
+          { href: "/guides", label: "All CI failure guides" },
+          {
+            href: "/guides/rspec-failed-github-actions",
+            label: "RSpec failed in GitHub Actions",
+          },
+          {
+            href: "/guides/phpunit-failed-github-actions",
+            label: "PHPUnit test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/gradle-test-failed-github-actions",
+            label: "Gradle / JUnit test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/maven-test-failed-github-actions",
+            label: "Maven / Surefire test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/rust-test-failed-github-actions",
+            label: "Rust cargo test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/go-test-failed-github-actions",
+            label: "Go test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/cypress-failed-github-actions",
+            label: "Cypress failed in GitHub Actions",
+          },
+          {
+            href: "/guides/playwright-failed-github-actions",
+            label: "Playwright failed in GitHub Actions",
+          },
+          {
+            href: "/guides/vitest-failed-github-actions",
+            label: "Vitest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/jest-failed-github-actions",
+            label: "Jest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/npm-test-failed-github-actions",
+            label: "npm test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/typescript-failed-github-actions",
+            label: "TypeScript / tsc failed in GitHub Actions",
+          },
+          {
+            href: "/guides/eslint-failed-github-actions",
+            label: "ESLint failed in GitHub Actions",
+          },
+          {
+            href: "/guides/pytest-failed-github-actions",
+            label: "pytest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/explain-github-actions-failure",
+            label: "Explain this GitHub Actions failure",
+          },
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question:
+          "Why does GitHub say Process completed with exit code 1 after dotnet test?",
+        answer:
+          "That line is a wrapper. On VSTest, dotnet test exits 1 when a test fails or when MSBuild fails, so the phrase dotnet test Process completed with exit code 1 is not the diagnosis. Failed!  - Failed:     1, Passed:     3 is the summary under a real failure. Microsoft.Testing.Platform uses other codes: exit 2 when a test failed, exit 8 when zero tests ran, and exit 9 when --minimum-expected-tests is not met. A missing SDK is Process completed with exit code 145 (A compatible .NET SDK was not found), and a missing dotnet binary is Process completed with exit code 127. Scroll up to the first Assert.Equal() Failure, Assert.AreEqual failed, But was:, error NU1101, error NU1301, error NU1004, or error NETSDK1045 — that is the cause.",
+      },
+      {
+        question:
+          "How do I tell a missing SDK, NuGet restore, build, or filter miss from a real assertion?",
+        answer:
+          "If actions/setup-dotnet is red, or the log prints A compatible .NET SDK was not found, error NETSDK1045, error NETSDK1147, error NU1101, error NU1301, error NU1004, error CS, or MSBUILD : error MSB1009, the suite never ran. No test is available and No test matches the given testcase filter mean the host started and selected nothing — often exit 0 on VSTest and exit 8 on MTP. The total line coverage is below the specified 80 after Passed! means the tests passed and Coverlet failed the job. A real failure shows Failed, then Assert.Equal() Failure with Expected: 18 and Actual:   20, or But was:  20, or Assert.AreEqual failed. Expected:<18>. Actual:<20>., then Failed!  - Failed:     1, Passed:     3.",
+      },
+      {
+        question: "Why do dotnet tests pass locally and fail in GitHub Actions?",
+        answer:
+          "The laptop often has a newer SDK than the runner, a populated NuGet cache, and credentials for a private feed. ubuntu-latest uses the setup-dotnet version, and global.json can still reject it with exit 145 when rollForward is disable. A NuGet.config that only exists in the user profile, or a GITHUB_TOKEN without packages: read, fails restore with error NU1301 and 401 (Unauthorized). packages.lock.json restored in locked mode fails with error NU1004 when the csproj moved and the lock file was not committed. A --filter TestCategory=Integration copied onto an xUnit v2 project, or --filter Category=Integration copied onto MSTest, prints No test matches the given testcase filter. dotnet test --no-build looks for a Debug dll after CI built Release.",
+      },
+      {
+        question:
+          "What does Failed! mean compared with error NU1101 or No test matches the given testcase filter?",
+        answer:
+          "error NU1101, error NU1301, and error NU1004 mean NuGet stopped during restore. No test method ran, so there is no Failed! banner and no Starting test execution line. error NETSDK1045 and A compatible .NET SDK was not found are the same split one step earlier. No test matches the given testcase filter and No test is available mean the host started and ran zero tests. Failed! together with Failed: 1, Assert.Equal() Failure, and Expected: 18 / Actual:   20 means the method ran. Fix the first one you see.",
+      },
+      {
+        question:
+          "Do I need to install a GitHub Action to explain dotnet test failed GitHub Actions?",
+        answer:
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+      },
+    ],
+  },
+  {
     slug: ACTION_INSTALL_SLUG,
     path: ACTION_INSTALL_PATH,
     title: "Install the CauseCI GitHub Action",
