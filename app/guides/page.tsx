@@ -8,7 +8,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "CI failure guides",
   description:
-    "Short notes on explaining GitHub Actions failures, npm test / Jest / Vitest CI fails, ESLint / npm run lint CI fails, TypeScript / tsc CI fails, Go test (go test ./...) CI fails, Rust cargo test CI fails, Maven / Surefire CI fails, Gradle / JUnit CI fails, PHPUnit CI fails, RSpec CI fails, finding a CI log root cause, autopsying GitLab or CircleCI jobs, and installing the CauseCI failure-teaser Action. Each page ends in the paste flow.",
+    "Short notes on explaining GitHub Actions failures, npm test / Jest / Vitest CI fails, ESLint / npm run lint CI fails, TypeScript / tsc CI fails, Go test (go test ./...) CI fails, Rust cargo test CI fails, Maven / Surefire CI fails, Gradle / JUnit CI fails, PHPUnit CI fails, RSpec CI fails, dotnet test / xUnit / NUnit / MSTest CI fails, finding a CI log root cause, autopsying GitLab or CircleCI jobs, and installing the CauseCI failure-teaser Action. Each page ends in the paste flow.",
   alternates: { canonical: "/guides" },
   openGraph: {
     title: "CI failure guides · CauseCI",
@@ -46,7 +46,8 @@ export default function GuidesIndexPage() {
         including npm test / Jest / Vitest failures, ESLint / npm run lint
         failures, TypeScript / tsc failures, Go test (go test ./...) failures,
         Rust cargo test failures, Maven / Surefire failures, Gradle / JUnit
-        failures, PHPUnit failures, RSpec failures, and how to install
+        failures, PHPUnit failures, RSpec failures, dotnet test / xUnit /
+        NUnit / MSTest failures, and how to install
         the optional GitHub Action
         teaser. Each page is a
         method you can run by hand, then a teaser autopsy if you want the

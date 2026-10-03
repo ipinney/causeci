@@ -45,6 +45,7 @@ describe("public SEO routes", () => {
       "/guides/gradle-test-failed-github-actions",
       "/guides/phpunit-failed-github-actions",
       "/guides/rspec-failed-github-actions",
+      "/guides/dotnet-test-failed-github-actions",
       ACTION_INSTALL_PATH,
     ]);
     expect(paths.some((path) => path.startsWith("/jobs"))).toBe(false);
@@ -66,7 +67,7 @@ describe("public SEO routes", () => {
   });
 
   it("keeps each guide useful: lede, sections, CTA-related FAQ, and a paste path", () => {
-    expect(GUIDES).toHaveLength(18);
+    expect(GUIDES).toHaveLength(19);
     expect(new Set(GUIDES.map((guide) => guide.slug)).size).toBe(GUIDES.length);
     expect(new Set(GUIDES.map((guide) => guide.path)).size).toBe(GUIDES.length);
     for (const guide of GUIDES) {
@@ -1094,6 +1095,118 @@ describe("public SEO routes", () => {
       ]),
     );
     expect(related).not.toContain("rspec-failed-github-actions");
+    expect(GUIDES.at(-1)?.slug).toBe("install-github-action-failure-teaser");
+  });
+
+  it("documents dotnet test vs SDK, restore, and filter failures for GitHub Actions", () => {
+    const guide = getGuide("dotnet-test-failed-github-actions");
+    expect(guide).toBeDefined();
+    expect(guide?.path).toBe("/guides/dotnet-test-failed-github-actions");
+    expect(guide?.title).toBe("dotnet test failed in GitHub Actions");
+    expect(guide?.updatedAt).toBe("2026-10-03");
+    expect(guide?.keywords).toEqual(
+      expect.arrayContaining([
+        "dotnet test failed GitHub Actions",
+        "dotnet test Process completed with exit code 1",
+        "Failed! Failed: 1, Passed: 3",
+        "NU1101 / NU1301 / packages.lock.json",
+      ]),
+    );
+    const body = [
+      guide?.lede,
+      ...(guide?.sections.flatMap((section) => [
+        ...section.paragraphs,
+        ...(section.list ?? []),
+        section.code?.content ?? "",
+      ]) ?? []),
+      ...(guide?.faqs.map((faq) => `${faq.question} ${faq.answer}`) ?? []),
+    ].join("\n");
+    expect(body).toMatch(/dotnet test/);
+    expect(body).toMatch(/actions\/setup-dotnet/);
+    expect(body).toMatch(/xunit\.runner\.visualstudio/);
+    expect(body).toMatch(/NUnit3TestAdapter/);
+    expect(body).toMatch(/MSTest\.TestAdapter/);
+    expect(body).toMatch(/Assert\.Equal\(\) Failure/);
+    expect(body).toMatch(/Expected: 18/);
+    expect(body).toMatch(/Actual: {3}20/);
+    expect(body).toMatch(/But was: {2}20/);
+    expect(body).toMatch(/Assert\.AreEqual failed\. Expected:<18>\. Actual:<20>\./);
+    expect(body).toMatch(/Failed! {2}- Failed: {5}1, Passed: {5}3/);
+    expect(body).toMatch(/No test matches the given testcase filter/);
+    expect(body).toMatch(/No test is available/);
+    expect(body).toMatch(/A compatible \.NET SDK was not found/);
+    expect(body).toMatch(/Requested SDK version: 8\.0\.403/);
+    expect(body).toMatch(/error NU1101/);
+    expect(body).toMatch(/error NU1301/);
+    expect(body).toMatch(/401 \(Unauthorized\)/);
+    expect(body).toMatch(/error NU1004/);
+    expect(body).toMatch(/packages\.lock\.json/);
+    expect(body).toMatch(/error NETSDK1045/);
+    expect(body).toMatch(/error NETSDK1147/);
+    expect(body).toMatch(/error NU1008/);
+    expect(body).toMatch(/MSBUILD : error MSB1009/);
+    expect(body).toMatch(/The test source file/);
+    expect(body).toMatch(/--no-build/);
+    expect(body).toMatch(/TestCategory=Integration/);
+    expect(body).toMatch(/Category=Integration/);
+    expect(body).toMatch(/--filter-trait/);
+    expect(body).toMatch(/global\.json/);
+    expect(body).toMatch(/The total line coverage is below the specified 80/);
+    expect(body).toContain("Process completed with exit code 1");
+    expect(body).toContain("Process completed with exit code 2");
+    expect(body).toContain("Process completed with exit code 8");
+    expect(body).toContain("Process completed with exit code 145");
+    expect(body).toContain("/analyze");
+    expect(body).toContain("/guides");
+    expect(body).toContain(ACTION_INSTALL_PATH);
+    expect(body).toContain("ipinney/causeci/action@main");
+    expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
+    expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
+    const links = guide?.sections.flatMap((section) => section.links ?? []) ?? [];
+    expect(links.some((link) => link.href === "/analyze")).toBe(true);
+    expect(links.some((link) => link.href === ACTION_INSTALL_PATH)).toBe(true);
+    expect(links.some((link) => link.href === "/guides")).toBe(true);
+    for (const href of [
+      "/guides/rspec-failed-github-actions",
+      "/guides/phpunit-failed-github-actions",
+      "/guides/gradle-test-failed-github-actions",
+      "/guides/maven-test-failed-github-actions",
+      "/guides/rust-test-failed-github-actions",
+      "/guides/go-test-failed-github-actions",
+      "/guides/cypress-failed-github-actions",
+      "/guides/playwright-failed-github-actions",
+      "/guides/vitest-failed-github-actions",
+      "/guides/jest-failed-github-actions",
+      "/guides/npm-test-failed-github-actions",
+      "/guides/typescript-failed-github-actions",
+      "/guides/eslint-failed-github-actions",
+      "/guides/pytest-failed-github-actions",
+      "/guides/explain-github-actions-failure",
+    ]) {
+      expect(links.some((link) => link.href === href)).toBe(true);
+    }
+    const related = otherGuides("dotnet-test-failed-github-actions").map((item) => item.slug);
+    expect(related).toEqual(
+      expect.arrayContaining([
+        "rspec-failed-github-actions",
+        "phpunit-failed-github-actions",
+        "gradle-test-failed-github-actions",
+        "maven-test-failed-github-actions",
+        "rust-test-failed-github-actions",
+        "go-test-failed-github-actions",
+        "cypress-failed-github-actions",
+        "playwright-failed-github-actions",
+        "vitest-failed-github-actions",
+        "jest-failed-github-actions",
+        "npm-test-failed-github-actions",
+        "typescript-failed-github-actions",
+        "eslint-failed-github-actions",
+        "pytest-failed-github-actions",
+        "install-github-action-failure-teaser",
+        "explain-github-actions-failure",
+      ]),
+    );
+    expect(related).not.toContain("dotnet-test-failed-github-actions");
     expect(GUIDES.at(-1)?.slug).toBe("install-github-action-failure-teaser");
   });
 });
