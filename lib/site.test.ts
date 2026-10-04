@@ -46,6 +46,7 @@ describe("public SEO routes", () => {
       "/guides/phpunit-failed-github-actions",
       "/guides/rspec-failed-github-actions",
       "/guides/dotnet-test-failed-github-actions",
+      "/guides/junit-failed-github-actions",
       ACTION_INSTALL_PATH,
     ]);
     expect(paths.some((path) => path.startsWith("/jobs"))).toBe(false);
@@ -67,7 +68,7 @@ describe("public SEO routes", () => {
   });
 
   it("keeps each guide useful: lede, sections, CTA-related FAQ, and a paste path", () => {
-    expect(GUIDES).toHaveLength(19);
+    expect(GUIDES).toHaveLength(20);
     expect(new Set(GUIDES.map((guide) => guide.slug)).size).toBe(GUIDES.length);
     expect(new Set(GUIDES.map((guide) => guide.path)).size).toBe(GUIDES.length);
     for (const guide of GUIDES) {
@@ -1207,6 +1208,108 @@ describe("public SEO routes", () => {
       ]),
     );
     expect(related).not.toContain("dotnet-test-failed-github-actions");
+    expect(GUIDES.at(-1)?.slug).toBe("install-github-action-failure-teaser");
+  });
+
+  it("documents JUnit vs engine, tag, and JDK failures for GitHub Actions", () => {
+    const guide = getGuide("junit-failed-github-actions");
+    expect(guide).toBeDefined();
+    expect(guide?.path).toBe("/guides/junit-failed-github-actions");
+    expect(guide?.title).toBe("JUnit failed in GitHub Actions");
+    expect(guide?.updatedAt).toBe("2026-10-04");
+    expect(guide?.keywords).toEqual(
+      expect.arrayContaining([
+        "junit failed GitHub Actions",
+        "junit Process completed with exit code 1",
+        "AssertionFailedError expected: <18> but was: <20>",
+        "Cannot create Launcher without at least one TestEngine",
+      ]),
+    );
+    const body = [
+      guide?.lede,
+      ...(guide?.sections.flatMap((section) => [
+        ...section.paragraphs,
+        ...(section.list ?? []),
+        section.code?.content ?? "",
+      ]) ?? []),
+      ...(guide?.faqs.map((faq) => `${faq.question} ${faq.answer}`) ?? []),
+    ].join("\n");
+    expect(body).toMatch(/junit-jupiter-engine/);
+    expect(body).toMatch(/junit-vintage-engine/);
+    expect(body).toMatch(/useJUnitPlatform/);
+    expect(body).toMatch(/actions\/setup-java/);
+    expect(body).toMatch(/org\.opentest4j\.AssertionFailedError: expected: <18> but was: <20>/);
+    expect(body).toMatch(/java\.lang\.AssertionError: expected:<18> but was:<20>/);
+    expect(body).toMatch(/Cannot create Launcher without at least one TestEngine/);
+    expect(body).toMatch(/Tests run: 0/);
+    expect(body).toMatch(/No tests were executed!/);
+    expect(body).toMatch(/failIfNoTests/);
+    expect(body).toMatch(/No tests matching pattern/);
+    expect(body).toMatch(/No tests found for given includes/);
+    expect(body).toMatch(/TestAbortedException: Assumption failed:/);
+    expect(body).toMatch(/@DisabledIfEnvironmentVariable/);
+    expect(body).toMatch(/-Dgroups=integration/);
+    expect(body).toMatch(/includeTags/);
+    expect(body).toMatch(/java\.lang\.UnsupportedClassVersionError/);
+    expect(body).toMatch(/class file version 65\.0/);
+    expect(body).toMatch(/up to 61\.0/);
+    expect(body).toContain("Process completed with exit code 1");
+    expect(body).toContain("Process completed with exit code 127");
+    expect(body).toContain("Process completed with exit code 137");
+    expect(body).toContain("https://causeci.vercel.app/analyze");
+    expect(body).toContain("/analyze");
+    expect(body).toContain("/guides");
+    expect(body).toContain(ACTION_INSTALL_PATH);
+    expect(body).toContain("ipinney/causeci/action@main");
+    expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
+    expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
+    const links = guide?.sections.flatMap((section) => section.links ?? []) ?? [];
+    expect(links.some((link) => link.href === "/analyze")).toBe(true);
+    expect(links.some((link) => link.href === ACTION_INSTALL_PATH)).toBe(true);
+    expect(links.some((link) => link.href === "/guides")).toBe(true);
+    for (const href of [
+      "/guides/dotnet-test-failed-github-actions",
+      "/guides/rspec-failed-github-actions",
+      "/guides/phpunit-failed-github-actions",
+      "/guides/gradle-test-failed-github-actions",
+      "/guides/maven-test-failed-github-actions",
+      "/guides/rust-test-failed-github-actions",
+      "/guides/go-test-failed-github-actions",
+      "/guides/cypress-failed-github-actions",
+      "/guides/playwright-failed-github-actions",
+      "/guides/vitest-failed-github-actions",
+      "/guides/jest-failed-github-actions",
+      "/guides/npm-test-failed-github-actions",
+      "/guides/typescript-failed-github-actions",
+      "/guides/eslint-failed-github-actions",
+      "/guides/pytest-failed-github-actions",
+      "/guides/explain-github-actions-failure",
+    ]) {
+      expect(links.some((link) => link.href === href)).toBe(true);
+    }
+    const related = otherGuides("junit-failed-github-actions").map((item) => item.slug);
+    expect(related).toEqual(
+      expect.arrayContaining([
+        "dotnet-test-failed-github-actions",
+        "rspec-failed-github-actions",
+        "phpunit-failed-github-actions",
+        "gradle-test-failed-github-actions",
+        "maven-test-failed-github-actions",
+        "rust-test-failed-github-actions",
+        "go-test-failed-github-actions",
+        "cypress-failed-github-actions",
+        "playwright-failed-github-actions",
+        "vitest-failed-github-actions",
+        "jest-failed-github-actions",
+        "npm-test-failed-github-actions",
+        "typescript-failed-github-actions",
+        "eslint-failed-github-actions",
+        "pytest-failed-github-actions",
+        "install-github-action-failure-teaser",
+        "explain-github-actions-failure",
+      ]),
+    );
+    expect(related).not.toContain("junit-failed-github-actions");
     expect(GUIDES.at(-1)?.slug).toBe("install-github-action-failure-teaser");
   });
 });

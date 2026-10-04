@@ -3451,6 +3451,285 @@ dotnet restore --locked-mode`,
     ],
   },
   {
+    slug: "junit-failed-github-actions",
+    path: "/guides/junit-failed-github-actions",
+    title: "JUnit failed in GitHub Actions",
+    description:
+      "How to read a red JUnit step in GitHub Actions: distinguish a missing Jupiter engine, a Vintage mismatch, a tag or -Dgroups miss, a JDK class-file error, or a compile failure from a real AssertionFailedError, and ignore Process completed with exit code 1.",
+    eyebrow: "JUnit · Jupiter · Vintage",
+    lede:
+      "When JUnit tests fail in GitHub Actions, the last line is almost always Process completed with exit code 1. That is a wrapper. The cause is the first real error — a JDK the tests were not compiled for, a missing junit-jupiter-engine, a tag or filter that matched nothing, or a real assertion with expected: <18> but was: <20>.",
+    keywords: [
+      "junit failed GitHub Actions",
+      "junit Process completed with exit code 1",
+      "AssertionFailedError expected: <18> but was: <20>",
+      "Cannot create Launcher without at least one TestEngine",
+      "junit-jupiter-engine / actions/setup-java",
+    ],
+    updatedAt: "2026-10-04",
+    sections: [
+      {
+        heading: "Start at the first error, not exit code 1",
+        paragraphs: [
+          "A red JUnit step almost always ends with Process completed with exit code 1. Ignore that wrapper line. Maven and Gradle both exit 1 when a test fails, when javac fails, and when a dependency does not resolve. Those are different failures that share a code. The JUnit Platform Console Launcher exits 1 when a test failed and exits 2 when you passed --fail-if-no-tests and it discovered nothing. The shell exits 127 on java: command not found, and the runner exits 137 when the kernel kills the JVM. Scroll up in the failing step to the first org.opentest4j.AssertionFailedError, java.lang.AssertionError: expected:<, <<< FAILURE!, <<< ERROR!, Cannot create Launcher without at least one TestEngine, Tests run: 0, No tests were executed!, No tests found for given includes, java.lang.UnsupportedClassVersionError, or ##[error]. That sentence is the diagnosis you are trying to name.",
+          "JUnit does not print RSpec's Failure/Error:, PHPUnit's FAILURES!, Jest's FAIL path, Go's --- FAIL:, or Cargo's test result: FAILED. A real Jupiter failure prints org.opentest4j.AssertionFailedError: expected: <18> but was: <20> and a stack frame in BillingTest.java. A real JUnit 4 failure prints java.lang.AssertionError: expected:<18> but was:<20>. Surefire wraps that in <<< FAILURE! and Tests run: 4, Failures: 1, Errors: 0, Skipped: 0. Gradle wraps it in com.acme.checkout.BillingTest > appliesSummerCoupon() FAILED and There were failing tests. BUILD FAILURE, BUILD FAILED, and There are test failures are the summary, not the cause. If you never see an assertion line or a test class name, the engine did not grade the suite. The Maven guide is the reactor and settings.xml. The Gradle guide is the task graph and the toolchain. This page is the JUnit sentence under either runner.",
+        ],
+        list: [
+          "Search the raw job log for AssertionFailedError, expected: <18> but was: <20>, expected:<18> but was:<20>, <<< FAILURE!, <<< ERROR!, Cannot create Launcher without at least one TestEngine, Tests run: 0, No tests were executed!, No tests found for given includes, UnsupportedClassVersionError, and ##[error].",
+          "Quote the first of those lines — do not paraphrase the wrapper Process completed with exit code 1, and do not stop at There are test failures or There were failing tests.",
+          "If the first error is in actions/setup-java, or the log stops on a compiler, class-file, or TestEngine line before any test method name, JUnit never graded the suite. Treat that as a JDK, classpath, or discovery failure.",
+        ],
+      },
+      {
+        heading: "Common JUnit CI failures",
+        paragraphs: [
+          "After the JDK is the one the sources were compiled for, and the test classes are on the classpath, the first red block is one of a short list. Rank it in this order. A class-file or compiler error happens before any test method. A missing engine, a Vintage-versus-Jupiter mismatch, or a tag filter means the launcher started and selected nothing. An assumption or @Disabled increments Skipped and leaves the job green. org.opentest4j.AssertionFailedError or java.lang.AssertionError: expected:< means that method ran. The dotnet guide is the same split for xUnit, NUnit, and MSTest; this page is JUnit Jupiter, JUnit 4, and the assertion.",
+          "Jupiter and JUnit 4 do not share an assertion sentence, and they do not share an engine. Jupiter's assertEquals(18, actual) throws org.opentest4j.AssertionFailedError: expected: <18> but was: <20>. JUnit 4's Assert.assertEquals(18, actual) throws java.lang.AssertionError: expected:<18> but was:<20> — no space after the colons. Both still name the test method and a line in BillingTest.java. An unexpected exception is a different bucket: Surefire prints <<< ERROR! and counts Errors: 1 with Failures: 0. It is still a test result, not a missing engine. A parameterized failure keeps the method name and adds the invocation, as in appliesSummerCoupon(String)[2].",
+          "The two engines discover different annotations. junit-jupiter-engine runs org.junit.jupiter.api.Test, @ParameterizedTest, and @Tag. It does not see org.junit.Test. junit-vintage-engine runs JUnit 4 tests, including @Category. It does not see Jupiter tags. The aggregator org.junit.jupiter:junit-jupiter pulls in junit-jupiter-api, junit-jupiter-params, and junit-jupiter-engine. A pom or build file that depends only on junit-jupiter-api compiles the tests and then fails at launch. Gradle runs Jupiter only after useJUnitPlatform(). Without that call, a project that has no JUnit 4 tests can finish green and run nothing.",
+          "A few outcomes look like assertion failures and are not. Cannot create Launcher without at least one TestEngine; consider adding an engine implementation JAR to the classpath means the launcher has no Jupiter engine and no Vintage engine. Tests run: 0, Failures: 0, Errors: 0, Skipped: 0 and No tests were executed! mean discovery selected nothing. Surefire's failIfNoTests defaults to false, so a zero-test run can stay green unless the pom turns that flag on. A -Dtest= filter that matches nothing is the stricter sibling: No tests matching pattern. Gradle prints No tests found for given includes. org.opentest4j.TestAbortedException: Assumption failed: means the method started and aborted. Surefire counts it as Skipped, not Failures, and the job stays green. @Disabled and @DisabledIfEnvironmentVariable do the same. GitHub Actions sets CI=true, so a test disabled when CI matches true runs on a laptop and is skipped on the runner.",
+        ],
+        list: [
+          "Real Jupiter assertion: <<< FAILURE! or BillingTest > appliesSummerCoupon() FAILED, then org.opentest4j.AssertionFailedError: expected: <18> but was: <20>, then Tests run: 4, Failures: 1, Errors: 0, Skipped: 0. The method ran. Open that line.",
+          "Real JUnit 4 assertion: java.lang.AssertionError: expected:<18> but was:<20>. Same family. Read the first method name. Vintage has to be on the runtime classpath or this test was never discovered.",
+          "Unexpected throw: <<< ERROR! and a type that is not an assertion (NullPointerException, or an exception from @BeforeEach). Errors: 1, Failures: 0. The test runtime started. It is still a test result.",
+          "Parameterized: the method name plus an index, appliesSummerCoupon(String)[2]. The assertion is the same AssertionFailedError. Re-run that method, then read the index.",
+          "Missing engine: Cannot create Launcher without at least one TestEngine. Add junit-jupiter-engine, or the junit-jupiter aggregator. Nothing asserted.",
+          "Wrong engine: JUnit 4 tests and only junit-jupiter-engine, or Jupiter tests and only junit-vintage-engine. Tests run: 0. Add the engine that matches the import.",
+          "Filter miss: No tests were executed!, No tests matching pattern, or No tests found for given includes. Nothing asserted. A -Dtest= miss fails the build. A discovery miss often does not, because failIfNoTests defaults to false.",
+          "Tag miss: -Dgroups=integration or includeTags(\"integration\") against @Tag(\"Integration\"), or a JUnit 4 @Category filtered with a Jupiter tag string. Tags are case-sensitive. Vintage categories are class names, not tag strings.",
+          "Assumption or disabled: TestAbortedException: Assumption failed:, or @DisabledIfEnvironmentVariable(named = \"CI\", matches = \"true\"). Skipped goes up. Failures stays 0. The job is green and the assertion did not run.",
+        ],
+        code: {
+          label: "JUnit failure log excerpt",
+          content: `[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.acme.checkout.BillingTest
+[ERROR] Tests run: 4, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.042 s <<< FAILURE! -- in com.acme.checkout.BillingTest
+[ERROR] com.acme.checkout.BillingTest.appliesSummerCoupon -- Time elapsed: 0.012 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: expected: <18> but was: <20>
+	at com.acme.checkout.BillingTest.appliesSummerCoupon(BillingTest.java:21)
+
+[ERROR] Failures:
+[ERROR]   BillingTest.appliesSummerCoupon:21 expected: <18> but was: <20>
+[INFO] BUILD FAILURE
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.2:test (default-test) on project checkout: There are test failures.
+[ERROR] Please refer to /home/runner/work/checkout/checkout/target/surefire-reports for the individual test results.
+##[error]Process completed with exit code 1`,
+        },
+      },
+      {
+        heading: "Engine, tags, JDK, and compile versus a real assertion",
+        paragraphs: [
+          "A broken classpath and a failing assertion look the same in the Checks UI: a red job and an exit code. They are not the same failure. Cannot create Launcher without at least one TestEngine, java.lang.UnsupportedClassVersionError, error: release version 21 not supported, and cannot find symbol mean no test method produced an assertion. Tests run: 0, No tests were executed!, and No tests found for given includes mean the launcher started and selected nothing. org.opentest4j.AssertionFailedError or java.lang.AssertionError: expected:<, after a test method name, means that method ran. If a class-file error and a <<< FAILURE! both appear in one paste, rank the earlier line first.",
+          "actions/setup-java selects the JDK before the test step. A red setup step — Could not find Java version, or a java-version that the distribution does not publish — means JUnit never started. When the step is green, read its java-version and distribution anyway. ubuntu-latest ships a JDK, and that JDK moves when GitHub bumps the runner image. A workflow that skips setup-java runs whatever java is on PATH. java.lang.UnsupportedClassVersionError: com/acme/checkout/BillingTest has been compiled by a more recent version of the Java Runtime (class file version 65.0), this version of the Java Runtime only recognizes class file versions up to 61.0 means the test classes were compiled for Java 21 (class file 65) and the runner is on Java 17 (class file 61). No assertion ran. error: release version 21 not supported is the same split one step earlier: javac refused the release, so Surefire never started. Point setup-java at the same major version the pom or toolchain compiles for.",
+          "The engine jars are the next gate, still before any assertion. org.junit.platform.commons.PreconditionViolationException: Cannot create Launcher without at least one TestEngine; consider adding an engine implementation JAR to the classpath means junit-jupiter-api is on the compile classpath and junit-jupiter-engine is not on the test runtime classpath. The junit-jupiter aggregator is the usual fix. junit-platform-launcher is not an engine; adding the launcher alone still throws that sentence. Gradle needs the same jar and useJUnitPlatform(). Without useJUnitPlatform(), Jupiter methods are invisible to the JUnit 4 runner Gradle uses by default, and the task can succeed with no tests. A project that still has org.junit.Test imports needs junit-vintage-engine next to the Jupiter engine. Vintage does not translate @Tag, and Jupiter does not translate @Category.",
+          "Tags, groups, and method filters are the selection gates that look like test failures. @Tag(\"integration\") matches Maven -Dgroups=integration and Gradle includeTags(\"integration\"). The match is case-sensitive: integration does not select Integration. JUnit 4 @Category(Integration.class) is a class name. Passing -Dgroups=integration to the Vintage provider does not select it. -Dtest=BillingTest#appliesSummerCoupon reruns one method on Surefire. A pattern that matches nothing prints No tests matching pattern and fails the goal. Gradle's ./gradlew test --tests com.acme.checkout.BillingTest.appliesSummerCoupon prints No tests found for given includes: [com.acme.checkout.BillingTest.appliesSummerCoupon](--tests filter) when the name is wrong. The separator is a dot, not Maven's #. A parameterized method reruns every invocation; the failure line's [2] is which one asserted.",
+          "Assumptions, disabled tests, and a killed JVM are the remaining lookalikes. org.opentest4j.TestAbortedException: Assumption failed: is Jupiter's Assumptions.assumeTrue. JUnit 4 prints org.junit.AssumptionViolatedException. Surefire files both under Skipped. Failures stays 0, so GitHub is green. @DisabledIfEnvironmentVariable(named = \"CI\", matches = \"true\") skips on the runner and runs on a laptop where CI is unset. That is a skip, not a pass. A @Timeout that fires is still a failure: you get <<< FAILURE! or FAILED and Failures: 1. Process completed with exit code 137, with no assertion line, means the kernel killed the process. There is no <<< FAILURE! to quote. Read the Maven guide for a Surefire fork crash and a settings.xml 401, and the Gradle guide for a toolchain miss and a ~/.gradle cache, when the first error is the build tool rather than JUnit.",
+        ],
+        list: [
+          "setup-java: the setup step is red, or the log says java: command not found. Exit 127 means the test JVM never started. Read java-version from that step before you read the assertion.",
+          "Class file: java.lang.UnsupportedClassVersionError and class file version 65.0 versus up to 61.0. Install the JDK the classes were compiled for. No test method ran.",
+          "Compile: error: release version 21 not supported or cannot find symbol. javac stopped the module. There is no <<< FAILURE! yet.",
+          "Engine: Cannot create Launcher without at least one TestEngine. Add junit-jupiter-engine. useJUnitPlatform() is required on Gradle. A green task with no test names is still a miss.",
+          "Vintage: org.junit.Test in the source and Tests run: 0 while Jupiter is the only engine. Add junit-vintage-engine. Jupiter @Tag tests need junit-jupiter-engine, not Vintage.",
+          "Tags: -Dgroups=integration or includeTags(\"integration\") must match @Tag exactly. A JUnit 4 category is a class, not that string.",
+          "Filter: No tests matching pattern, No tests were executed!, or No tests found for given includes. Surefire -Dtest= uses #. Gradle --tests uses a dot.",
+          "Skipped: TestAbortedException: Assumption failed: or @DisabledIfEnvironmentVariable and CI=true. Skipped counts. Failures does not. The check can be green.",
+          "Assertion: org.opentest4j.AssertionFailedError: expected: <18> but was: <20> or java.lang.AssertionError: expected:<18> but was:<20>, then Failures: 1. Re-run that method. Exit 137 with no assertion is a killed JVM, not a JUnit result.",
+        ],
+        code: {
+          label: "Same wrapper family, different first errors",
+          content: `# JDK — the test classes were compiled by a newer runtime
+java.lang.UnsupportedClassVersionError: com/acme/checkout/BillingTest has been compiled by a more recent version of the Java Runtime (class file version 65.0), this version of the Java Runtime only recognizes class file versions up to 61.0
+##[error]Process completed with exit code 1
+
+# Compiler — JUnit never started
+[ERROR] Fatal error compiling: error: release version 21 not supported
+##[error]Process completed with exit code 1
+
+# Missing engine — launcher has no Jupiter or Vintage engine
+org.junit.platform.commons.PreconditionViolationException: Cannot create Launcher without at least one TestEngine; consider adding an engine implementation JAR to the classpath
+##[error]Process completed with exit code 1
+
+# Discovery — nothing selected, and the build set failIfNoTests (the default is false)
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0
+[ERROR] No tests were executed!  (Set -DfailIfNoTests=false to ignore this error.)
+##[error]Process completed with exit code 1
+
+# Method filter — Surefire -Dtest= matched nothing
+[ERROR] No tests matching pattern "BillingTest#missingMethod" were executed! (Set -Dsurefire.failIfNoSpecifiedTests=false to ignore this error.)
+##[error]Process completed with exit code 1
+
+# Gradle filter — --tests name is wrong
+> No tests found for given includes: [com.acme.checkout.BillingTest.appliesSummerCoupon](--tests filter)
+##[error]Process completed with exit code 1
+
+# Assumption — the method aborted, Failures stays 0, the job can stay green
+org.opentest4j.TestAbortedException: Assumption failed: summer coupon is enabled
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 1
+
+# Real Jupiter assertion — the method ran
+org.opentest4j.AssertionFailedError: expected: <18> but was: <20>
+	at com.acme.checkout.BillingTest.appliesSummerCoupon(BillingTest.java:21)
+[ERROR] Tests run: 4, Failures: 1, Errors: 0, Skipped: 0
+##[error]Process completed with exit code 1
+
+# Real JUnit 4 assertion — Vintage
+java.lang.AssertionError: expected:<18> but was:<20>
+	at com.acme.checkout.BillingTest.appliesSummerCoupon(BillingTest.java:21)
+##[error]Process completed with exit code 1
+
+# Gradle — same assertion, different frame
+com.acme.checkout.BillingTest > appliesSummerCoupon() FAILED
+    org.opentest4j.AssertionFailedError: expected: <18> but was: <20>
+        at app//com.acme.checkout.BillingTest.appliesSummerCoupon(BillingTest.java:21)
+##[error]Process completed with exit code 1
+
+# Runner killed — no assertion to quote
+##[error]Process completed with exit code 137`,
+        },
+      },
+      {
+        heading: "Reproduce with the same CI command",
+        paragraphs: [
+          "A laptop that already has a newer JDK, a warm local Maven or Gradle cache, and CI unset is not the CI gate. Match the runner: the same distribution and java-version as actions/setup-java (read them from that step), then the exact test command. If CI runs ./mvnw -B -ntp test, run that — not a Gradle task, and not a -Dgroups filter you added while debugging. If CI runs ./gradlew test --no-daemon, run that. The engine on the test runtime classpath has to be the one the annotations need.",
+          "Pass the same project path and the same working directory. A monorepo step that sets working-directory: services/billing must be run from services/billing. Quote filters. Surefire's one-method form is -Dtest=BillingTest#appliesSummerCoupon. Gradle's is --tests com.acme.checkout.BillingTest.appliesSummerCoupon. Drop -Dgroups and includeTags unless CI passes them. Export CI=true before a local run if a test uses @DisabledIfEnvironmentVariable or Assumptions.assumeTrue on that variable. Confirm with java -version that the class-file level matches. Class file 65 needs Java 21. Class file 61 needs Java 17.",
+        ],
+        list: [
+          "JDK: install the version from setup-java. Confirm with java -version and echo \"$JAVA_HOME\". The class file in the error must be a version that JDK can run.",
+          "Engine: the test runtime includes junit-jupiter-engine for Jupiter, and junit-vintage-engine for org.junit.Test. Gradle calls useJUnitPlatform() when CI does.",
+          "Maven: ./mvnw -B -ntp test. One method: ./mvnw -B -ntp -Dtest=BillingTest#appliesSummerCoupon test. Tags, only if CI sets them: ./mvnw -B -ntp -Dgroups=integration test.",
+          "Gradle: ./gradlew test --no-daemon. One method: ./gradlew test --tests com.acme.checkout.BillingTest.appliesSummerCoupon --no-daemon. Use a dot, not #.",
+        ],
+        code: {
+          label: "Same commands the runner used",
+          content: `java -version
+echo "$JAVA_HOME"
+# Maven — only if CI uses the wrapper
+./mvnw -B -ntp test
+./mvnw -B -ntp -Dtest=BillingTest#appliesSummerCoupon test
+# Gradle — only if CI uses the wrapper
+./gradlew test --no-daemon
+./gradlew test --tests com.acme.checkout.BillingTest.appliesSummerCoupon --no-daemon
+# only if CI set these:
+./mvnw -B -ntp -Dgroups=integration test
+export CI=true`,
+        },
+      },
+      {
+        heading: "Paste the log when the first error is still unclear",
+        paragraphs: [
+          "This page is the free teaser. It names the first JUnit error family and the command that should reproduce it, and it stops there. It does not rank the rest of your log or draft a patch. If the log is long, or the assertion is buried under dependency download noise, paste the failed job output at https://causeci.vercel.app/analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
+        ],
+        links: [
+          { href: "/analyze", label: "Paste a log on CauseCI" },
+          {
+            href: ACTION_INSTALL_PATH,
+            label: "Optional: install the failure-teaser Action",
+          },
+          { href: "/guides", label: "All CI failure guides" },
+          {
+            href: "/guides/dotnet-test-failed-github-actions",
+            label: "dotnet test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/rspec-failed-github-actions",
+            label: "RSpec failed in GitHub Actions",
+          },
+          {
+            href: "/guides/phpunit-failed-github-actions",
+            label: "PHPUnit test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/gradle-test-failed-github-actions",
+            label: "Gradle / JUnit test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/maven-test-failed-github-actions",
+            label: "Maven / Surefire test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/rust-test-failed-github-actions",
+            label: "Rust cargo test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/go-test-failed-github-actions",
+            label: "Go test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/cypress-failed-github-actions",
+            label: "Cypress failed in GitHub Actions",
+          },
+          {
+            href: "/guides/playwright-failed-github-actions",
+            label: "Playwright failed in GitHub Actions",
+          },
+          {
+            href: "/guides/vitest-failed-github-actions",
+            label: "Vitest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/jest-failed-github-actions",
+            label: "Jest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/npm-test-failed-github-actions",
+            label: "npm test failed in GitHub Actions",
+          },
+          {
+            href: "/guides/typescript-failed-github-actions",
+            label: "TypeScript / tsc failed in GitHub Actions",
+          },
+          {
+            href: "/guides/eslint-failed-github-actions",
+            label: "ESLint failed in GitHub Actions",
+          },
+          {
+            href: "/guides/pytest-failed-github-actions",
+            label: "pytest failed in GitHub Actions",
+          },
+          {
+            href: "/guides/explain-github-actions-failure",
+            label: "Explain this GitHub Actions failure",
+          },
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question:
+          "Why does GitHub say Process completed with exit code 1 after JUnit?",
+        answer:
+          "That line is a wrapper. Maven and Gradle exit 1 when a test fails and when the build fails, so the phrase JUnit Process completed with exit code 1 is not the diagnosis. There are test failures and There were failing tests are the summary under a real failure. The JUnit Platform Console Launcher exits 2 when --fail-if-no-tests is set and nothing was discovered. A missing java binary is Process completed with exit code 127, and a killed JVM is Process completed with exit code 137. Scroll up to the first org.opentest4j.AssertionFailedError, java.lang.AssertionError: expected:<, Cannot create Launcher without at least one TestEngine, or java.lang.UnsupportedClassVersionError — that is the cause.",
+      },
+      {
+        question:
+          "How do I tell a missing engine, a tag miss, a JDK mismatch, or a compile error from a real assertion?",
+        answer:
+          "If actions/setup-java is red, or the log prints java.lang.UnsupportedClassVersionError, error: release version 21 not supported, cannot find symbol, or Cannot create Launcher without at least one TestEngine, the suite never ran. Tests run: 0, No tests were executed!, No tests matching pattern, and No tests found for given includes mean the launcher started and selected nothing. org.opentest4j.TestAbortedException: Assumption failed: and @DisabledIfEnvironmentVariable mean the method was skipped and Failures stayed 0. A real failure shows org.opentest4j.AssertionFailedError: expected: <18> but was: <20> or java.lang.AssertionError: expected:<18> but was:<20>, then Failures: 1.",
+      },
+      {
+        question: "Why do JUnit tests pass locally and fail in GitHub Actions?",
+        answer:
+          "The laptop often has a newer JDK than actions/setup-java, so the runner throws java.lang.UnsupportedClassVersionError with class file version 65.0 against a runtime that only recognizes versions up to 61.0. A pom that depends on junit-jupiter-api and not junit-jupiter-engine throws Cannot create Launcher without at least one TestEngine only when that engine is absent from the test runtime the job builds. useJUnitPlatform() missing from the Gradle script leaves Jupiter tests undiscovered. @Tag(\"integration\") does not match -Dgroups=Integration. @DisabledIfEnvironmentVariable(named = \"CI\", matches = \"true\") skips on the runner because GitHub sets CI=true and a laptop shell often does not. An assumption that reads the same variable aborts with TestAbortedException and a green job.",
+      },
+      {
+        question:
+          "What does AssertionFailedError mean compared with Cannot create Launcher without at least one TestEngine or Tests run: 0?",
+        answer:
+          "Cannot create Launcher without at least one TestEngine means the JUnit Platform started and found no engine jar. No test method ran, so there is no AssertionFailedError and no Failures: 1. Tests run: 0 and No tests were executed! are the same split one step later: an engine may be present, and the tag, filter, or Vintage-versus-Jupiter mismatch selected nothing. org.opentest4j.AssertionFailedError: expected: <18> but was: <20> together with Failures: 1 means the Jupiter method ran. java.lang.AssertionError: expected:<18> but was:<20> is the JUnit 4 form. Fix the first one you see.",
+      },
+      {
+        question:
+          "Do I need to install a GitHub Action to explain junit failed GitHub Actions?",
+        answer:
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+      },
+    ],
+  },
+  {
     slug: ACTION_INSTALL_SLUG,
     path: ACTION_INSTALL_PATH,
     title: "Install the CauseCI GitHub Action",
