@@ -443,7 +443,7 @@ Error: Process completed with exit code 1
         heading: "Paste the log when the first error is still unclear",
         paragraphs: [
           "If the log is long or the first error is buried under npm noise, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
-          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install with uses: ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install. Notes live at /guides/install-github-action-failure-teaser.",
         ],
         links: [
           { href: "/analyze", label: "Paste a log on CauseCI" },
@@ -468,7 +468,7 @@ Error: Process completed with exit code 1
       {
         question: "Do I need to install a GitHub Action to explain eslint failed GitHub Actions?",
         answer:
-          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install.",
       },
     ],
   },
@@ -548,7 +548,7 @@ Found 1 error in src/app.ts:12`,
         heading: "Paste the log when the first error is still unclear",
         paragraphs: [
           "If the log is long or the first error is buried under npm noise, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
-          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install with uses: ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install. Notes live at /guides/install-github-action-failure-teaser.",
         ],
         links: [
           { href: "/analyze", label: "Paste a log on CauseCI" },
@@ -573,7 +573,7 @@ Found 1 error in src/app.ts:12`,
       {
         question: "Do I need to install a GitHub Action to explain typescript failed GitHub Actions?",
         answer:
-          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install.",
       },
     ],
   },
@@ -654,7 +654,7 @@ FAILED tests/test_billing.py::test_coupon - AssertionError: assert 20 == 18
         heading: "Paste the log when the first error is still unclear",
         paragraphs: [
           "If the log is long or the first error is buried under pip noise, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
-          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install with uses: ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install. Notes live at /guides/install-github-action-failure-teaser.",
         ],
         links: [
           { href: "/analyze", label: "Paste a log on CauseCI" },
@@ -679,7 +679,7 @@ FAILED tests/test_billing.py::test_coupon - AssertionError: assert 20 == 18
       {
         question: "Do I need to install a GitHub Action to explain pytest failed GitHub Actions?",
         answer:
-          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install.",
       },
     ],
   },
@@ -770,7 +770,7 @@ Test Suites: 1 failed, 4 passed, 5 total`,
         heading: "Paste the log when the first error is still unclear",
         paragraphs: [
           "If the log is long or the first error is buried under npm noise, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
-          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install with uses: ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install. Notes live at /guides/install-github-action-failure-teaser.",
         ],
         links: [
           { href: "/analyze", label: "Paste a log on CauseCI" },
@@ -815,7 +815,7 @@ Test Suites: 1 failed, 4 passed, 5 total`,
       {
         question: "Do I need to install a GitHub Action to explain jest failed GitHub Actions?",
         answer:
-          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install.",
       },
     ],
   },
@@ -957,7 +957,7 @@ src/billing.ts:40:0: ERROR: Expected "}" but found end of file
         heading: "Paste the log when the first error is still unclear",
         paragraphs: [
           "If the log is long or the first error is buried under Vite transform noise, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
-          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install with uses: ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install. Notes live at /guides/install-github-action-failure-teaser.",
         ],
         links: [
           { href: "/analyze", label: "Paste a log on CauseCI" },
@@ -1011,7 +1011,7 @@ src/billing.ts:40:0: ERROR: Expected "}" but found end of file
       {
         question: "Do I need to install a GitHub Action to explain vitest failed GitHub Actions?",
         answer:
-          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install.",
       },
     ],
   },
@@ -1162,7 +1162,7 @@ xvfb-run npx playwright test`,
         heading: "Paste the log when the first error is still unclear",
         paragraphs: [
           "If the log is long or the first error is buried under browser download noise, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
-          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install with uses: ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
         ],
         links: [
           { href: "/analyze", label: "Paste a log on CauseCI" },
@@ -1221,7 +1221,7 @@ xvfb-run npx playwright test`,
       {
         question: "Do I need to install a GitHub Action to explain playwright failed GitHub Actions?",
         answer:
-          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install.",
       },
     ],
   },
@@ -1372,7 +1372,7 @@ xvfb-run npx cypress run --headed`,
         heading: "Paste the log when the first error is still unclear",
         paragraphs: [
           "If the log is long or the first error is buried under the binary download, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
-          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install with uses: ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
         ],
         links: [
           { href: "/analyze", label: "Paste a log on CauseCI" },
@@ -1435,7 +1435,7 @@ xvfb-run npx cypress run --headed`,
       {
         question: "Do I need to install a GitHub Action to explain cypress failed GitHub Actions?",
         answer:
-          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install.",
       },
     ],
   },
@@ -1609,7 +1609,7 @@ go test -tags=integration ./...`,
         heading: "Paste the log when the first error is still unclear",
         paragraphs: [
           "If the log is long or the first error is buried under module download noise, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
-          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install with uses: ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
         ],
         links: [
           { href: "/analyze", label: "Paste a log on CauseCI" },
@@ -1682,7 +1682,7 @@ go test -tags=integration ./...`,
       {
         question: "Do I need to install a GitHub Action to explain go test failed GitHub Actions?",
         answer:
-          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install.",
       },
     ],
   },
@@ -1879,7 +1879,7 @@ cargo test --locked --features integration`,
         heading: "Paste the log when the first error is still unclear",
         paragraphs: [
           "If the log is long or the first error is buried under crate download noise, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
-          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install with uses: ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
         ],
         links: [
           { href: "/analyze", label: "Paste a log on CauseCI" },
@@ -1956,7 +1956,7 @@ cargo test --locked --features integration`,
       {
         question: "Do I need to install a GitHub Action to explain cargo test failed GitHub Actions?",
         answer:
-          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install.",
       },
     ],
   },
@@ -2131,7 +2131,7 @@ echo "$JAVA_HOME"
         heading: "Paste the log when the first error is still unclear",
         paragraphs: [
           "If the log is long or the first error is buried under dependency download noise, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
-          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install with uses: ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
         ],
         links: [
           { href: "/analyze", label: "Paste a log on CauseCI" },
@@ -2215,7 +2215,7 @@ echo "$JAVA_HOME"
         question:
           "Do I need to install a GitHub Action to explain Maven test failed GitHub Actions?",
         answer:
-          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install.",
       },
     ],
   },
@@ -2422,7 +2422,7 @@ echo "$JAVA_HOME"
         heading: "Paste the log when the first error is still unclear",
         paragraphs: [
           "If the log is long or the first error is buried under dependency download noise, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
-          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install with uses: ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
         ],
         links: [
           { href: "/analyze", label: "Paste a log on CauseCI" },
@@ -2510,7 +2510,7 @@ echo "$JAVA_HOME"
         question:
           "Do I need to install a GitHub Action to explain Gradle test failed GitHub Actions?",
         answer:
-          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install.",
       },
     ],
   },
@@ -2718,7 +2718,7 @@ vendor/bin/phpunit --fail-on-deprecation --process-isolation`,
         heading: "Paste the log when the first error is still unclear",
         paragraphs: [
           "If the log is long or the first error is buried under composer download noise, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
-          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install with uses: ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
         ],
         links: [
           { href: "/analyze", label: "Paste a log on CauseCI" },
@@ -2810,7 +2810,7 @@ vendor/bin/phpunit --fail-on-deprecation --process-isolation`,
         question:
           "Do I need to install a GitHub Action to explain PHPUnit failed GitHub Actions?",
         answer:
-          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install.",
       },
     ],
   },
@@ -3041,7 +3041,7 @@ CI=true DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/checkout_test D
         heading: "Paste the log when the first error is still unclear",
         paragraphs: [
           "If the log is long or the first error is buried under gem download noise, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
-          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install with uses: ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
         ],
         links: [
           { href: "/analyze", label: "Paste a log on CauseCI" },
@@ -3137,7 +3137,7 @@ CI=true DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/checkout_test D
         question:
           "Do I need to install a GitHub Action to explain rspec failed GitHub Actions?",
         answer:
-          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install.",
       },
     ],
   },
@@ -3346,7 +3346,7 @@ dotnet restore --locked-mode`,
         heading: "Paste the log when the first error is still unclear",
         paragraphs: [
           "If the log is long or the first error is buried under NuGet download noise, paste the failed job output at /analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
-          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install with uses: ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
         ],
         links: [
           { href: "/analyze", label: "Paste a log on CauseCI" },
@@ -3446,7 +3446,7 @@ dotnet restore --locked-mode`,
         question:
           "Do I need to install a GitHub Action to explain dotnet test failed GitHub Actions?",
         answer:
-          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install.",
       },
     ],
   },
@@ -3621,7 +3621,7 @@ export CI=true`,
         heading: "Paste the log when the first error is still unclear",
         paragraphs: [
           "This page is the free teaser. It names the first JUnit error family and the command that should reproduce it, and it stops there. It does not rank the rest of your log or draft a patch. If the log is long, or the assertion is buried under dependency download noise, paste the failed job output at https://causeci.vercel.app/analyze. CauseCI returns a teaser with the top cause free. Remaining ranks and a patch draft stay locked until you unlock the artifact. The Action does not upload your log — a human still pastes it.",
-          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install from the public repo path uses: ipinney/causeci/action@main. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
+          "An optional teaser Action can post a truncated excerpt and a paste link when a job fails. It is not a Marketplace publish. Install with uses: ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install. Notes live at /guides/install-github-action-failure-teaser. All of the notes, including this one, are listed at /guides.",
         ],
         links: [
           { href: "/analyze", label: "Paste a log on CauseCI" },
@@ -3725,7 +3725,7 @@ export CI=true`,
         question:
           "Do I need to install a GitHub Action to explain junit failed GitHub Actions?",
         answer:
-          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci/action@main.",
+          "No. Paste the log at /analyze. The top cause is free. An optional teaser Action can comment a truncated excerpt and a link back; it does not upload the log and is not on the Marketplace. Public callers use ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install.",
       },
     ],
   },
@@ -3734,24 +3734,25 @@ export CI=true`,
     path: ACTION_INSTALL_PATH,
     title: "Install the CauseCI GitHub Action",
     description:
-      "Install the CauseCI failure-teaser Action from the repo path — not the Marketplace. On a red job it posts a truncated excerpt and a paste link. It does not upload your log.",
+      "Install the CauseCI failure-teaser Action with uses: ipinney/causeci@v1. On a red job it posts a truncated excerpt and a paste link. It does not upload your log. It is not on the Marketplace.",
     eyebrow: "GitHub Action",
     lede:
       "When a GitHub Actions job fails, this Action writes a short teaser and a link back to CauseCI. A human pastes the log. The top cause on the site is free. Nothing is uploaded.",
     keywords: [
       "CauseCI GitHub Action",
       "install GitHub Action failure teaser",
+      "ipinney/causeci@v1",
       "ipinney/causeci/action",
       "CI failure teaser",
       "GitHub Actions paste link",
     ],
-    updatedAt: "2026-09-18",
+    updatedAt: "2026-10-05",
     sections: [
       {
         heading: "What it does — and what it does not",
         paragraphs: [
           "On if: failure(), the Action writes a job summary (and an optional pull-request comment) that tells someone to paste the log at CauseCI. Prefer tee on the failing step so log-path points at a real file.",
-          "It is not on the GitHub Marketplace. Install it from this repository path: uses: ipinney/causeci/action@main. No CauseCI API key, no outbound email, and no secrets belong in the Action folder.",
+          "It is not on the GitHub Marketplace. Install it with uses: ipinney/causeci@v1. Pin a commit SHA (uses: ipinney/causeci@<commit-sha>) for a hardened install. Anyone already on ipinney/causeci/action@... can keep that path. No CauseCI API key, no outbound email, and no secrets belong in the Action folder.",
         ],
         list: [
           "Does: truncated teaser + paste link to /analyze. Top cause on the site is free.",
@@ -3791,7 +3792,7 @@ jobs:
         run: npm test 2>&1 | tee ci.log
       - name: CauseCI teaser
         if: failure()
-        uses: ipinney/causeci/action@main
+        uses: ipinney/causeci@v1
         with:
           log-path: ci.log`,
         },
@@ -3835,12 +3836,12 @@ jobs:
       {
         heading: "Pin a SHA; private caller repos are fine",
         paragraphs: [
-          "Pin a commit SHA instead of @main if you want a frozen install: uses: ipinney/causeci/action@<commit-sha>.",
-          "CauseCI is a public repository. Public callers can use ipinney/causeci/action@main (or a pinned SHA) without requesting access. Private caller repositories are fine — GitHub Actions can consume a public Action from a private workflow.",
+          "Pin a commit SHA instead of the moving v1 tag if you want a hardened, frozen install: uses: ipinney/causeci@<commit-sha>.",
+          "CauseCI is a public repository. Public callers can use ipinney/causeci@v1 (or a pinned SHA) without requesting access. Private caller repositories are fine — GitHub Actions can consume a public Action from a private workflow.",
         ],
         code: {
-          label: "Frozen install",
-          content: "uses: ipinney/causeci/action@<commit-sha>",
+          label: "Hardened install",
+          content: "uses: ipinney/causeci@<commit-sha>",
         },
       },
       {
@@ -3871,7 +3872,7 @@ jobs:
       {
         question: "Is this Action on the GitHub Marketplace?",
         answer:
-          "No. Install it from the repository path ipinney/causeci/action@main (or a commit SHA). There is no Marketplace listing.",
+          "No. Install it with ipinney/causeci@v1, or pin a commit SHA for a hardened install. There is no Marketplace listing. The older path ipinney/causeci/action@... still runs the same Action.",
       },
       {
         question: "Does the Action upload my CI log?",
@@ -3881,7 +3882,7 @@ jobs:
       {
         question: "Can a private repository use the Action?",
         answer:
-          "Yes. CauseCI is public. Public callers use ipinney/causeci/action@main (or a pinned SHA). A private caller repo does not need extra access to this Action.",
+          "Yes. CauseCI is public. Public callers use ipinney/causeci@v1 (or a pinned SHA). A private caller repo does not need extra access to this Action.",
       },
       {
         question: "Do I need an API key or paid plan to install it?",

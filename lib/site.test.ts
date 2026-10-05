@@ -83,7 +83,7 @@ describe("public SEO routes", () => {
     const guide = getGuide("install-github-action-failure-teaser");
     expect(guide).toBeDefined();
     expect(guide?.path).toBe(ACTION_INSTALL_PATH);
-    const yaml = guide?.sections.find((section) => section.code?.content.includes("uses: ipinney/causeci/action@main"));
+    const yaml = guide?.sections.find((section) => section.code?.content.includes("uses: ipinney/causeci@v1"));
     expect(yaml?.code?.content).toContain("if: failure()");
     expect(yaml?.code?.content).toContain("tee ci.log");
     expect(yaml?.code?.content).toContain("permissions:");
@@ -94,7 +94,7 @@ describe("public SEO routes", () => {
       section.paragraphs.some(
         (paragraph) =>
           paragraph.includes("public repository") &&
-          paragraph.includes("ipinney/causeci/action@main") &&
+          paragraph.includes("ipinney/causeci@v1") &&
           paragraph.includes("Private caller"),
       ),
     );
@@ -106,7 +106,12 @@ describe("public SEO routes", () => {
         ),
     );
     expect(stalePrivate).toBe(false);
-    expect(guide?.updatedAt).toBe("2026-09-18");
+    expect(guide?.updatedAt).toBe("2026-10-05");
+    const hardened = guide?.sections.some((section) =>
+      section.code?.content.includes("uses: ipinney/causeci@<commit-sha>") ||
+      section.paragraphs.some((paragraph) => paragraph.includes("uses: ipinney/causeci@<commit-sha>")),
+    );
+    expect(hardened).toBe(true);
     const links = guide?.sections.flatMap((section) => section.links ?? []);
     expect(links?.some((link) => link.href === ACTION_SOURCE_URL)).toBe(true);
     expect(links?.some((link) => link.href === ACTION_README_URL)).toBe(true);
@@ -173,7 +178,8 @@ describe("public SEO routes", () => {
     expect(body).toMatch(/frozen lockfile|npm ci/i);
     expect(body).toContain("/analyze");
     expect(body).toContain(ACTION_INSTALL_PATH);
-    expect(body).toContain("ipinney/causeci/action@main");
+    expect(body).toContain("uses: ipinney/causeci@v1");
+    expect(body).toContain("uses: ipinney/causeci@<commit-sha>");
     expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
     expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
     const links = guide?.sections.flatMap((section) => section.links ?? []);
@@ -209,7 +215,8 @@ describe("public SEO routes", () => {
     expect(body).toMatch(/frozen lockfile|npm ci/i);
     expect(body).toContain("/analyze");
     expect(body).toContain(ACTION_INSTALL_PATH);
-    expect(body).toContain("ipinney/causeci/action@main");
+    expect(body).toContain("uses: ipinney/causeci@v1");
+    expect(body).toContain("uses: ipinney/causeci@<commit-sha>");
     expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
     expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
     const links = guide?.sections.flatMap((section) => section.links ?? []);
@@ -245,7 +252,8 @@ describe("public SEO routes", () => {
     expect(body).toMatch(/assert|AssertionError/i);
     expect(body).toContain("/analyze");
     expect(body).toContain(ACTION_INSTALL_PATH);
-    expect(body).toContain("ipinney/causeci/action@main");
+    expect(body).toContain("uses: ipinney/causeci@v1");
+    expect(body).toContain("uses: ipinney/causeci@<commit-sha>");
     expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
     expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
     const links = guide?.sections.flatMap((section) => section.links ?? []);
@@ -286,7 +294,8 @@ describe("public SEO routes", () => {
     expect(body).toContain("Process completed with exit code 1");
     expect(body).toContain("/analyze");
     expect(body).toContain(ACTION_INSTALL_PATH);
-    expect(body).toContain("ipinney/causeci/action@main");
+    expect(body).toContain("uses: ipinney/causeci@v1");
+    expect(body).toContain("uses: ipinney/causeci@<commit-sha>");
     expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
     expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
     const links = guide?.sections.flatMap((section) => section.links ?? []) ?? [];
@@ -354,7 +363,8 @@ describe("public SEO routes", () => {
     expect(body).toContain("Process completed with exit code 1");
     expect(body).toContain("/analyze");
     expect(body).toContain(ACTION_INSTALL_PATH);
-    expect(body).toContain("ipinney/causeci/action@main");
+    expect(body).toContain("uses: ipinney/causeci@v1");
+    expect(body).toContain("uses: ipinney/causeci@<commit-sha>");
     expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
     expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
     const links = guide?.sections.flatMap((section) => section.links ?? []) ?? [];
@@ -428,7 +438,8 @@ describe("public SEO routes", () => {
     expect(body).toContain("/analyze");
     expect(body).toContain("/guides");
     expect(body).toContain(ACTION_INSTALL_PATH);
-    expect(body).toContain("ipinney/causeci/action@main");
+    expect(body).toContain("uses: ipinney/causeci@v1");
+    expect(body).toContain("uses: ipinney/causeci@<commit-sha>");
     expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
     expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
     const links = guide?.sections.flatMap((section) => section.links ?? []) ?? [];
@@ -507,7 +518,8 @@ describe("public SEO routes", () => {
     expect(body).toContain("/analyze");
     expect(body).toContain("/guides");
     expect(body).toContain(ACTION_INSTALL_PATH);
-    expect(body).toContain("ipinney/causeci/action@main");
+    expect(body).toContain("uses: ipinney/causeci@v1");
+    expect(body).toContain("uses: ipinney/causeci@<commit-sha>");
     expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
     expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
     const links = guide?.sections.flatMap((section) => section.links ?? []) ?? [];
@@ -586,7 +598,8 @@ describe("public SEO routes", () => {
     expect(body).toContain("/analyze");
     expect(body).toContain("/guides");
     expect(body).toContain(ACTION_INSTALL_PATH);
-    expect(body).toContain("ipinney/causeci/action@main");
+    expect(body).toContain("uses: ipinney/causeci@v1");
+    expect(body).toContain("uses: ipinney/causeci@<commit-sha>");
     expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
     expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
     const links = guide?.sections.flatMap((section) => section.links ?? []) ?? [];
@@ -671,7 +684,8 @@ describe("public SEO routes", () => {
     expect(body).toContain("/analyze");
     expect(body).toContain("/guides");
     expect(body).toContain(ACTION_INSTALL_PATH);
-    expect(body).toContain("ipinney/causeci/action@main");
+    expect(body).toContain("uses: ipinney/causeci@v1");
+    expect(body).toContain("uses: ipinney/causeci@<commit-sha>");
     expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
     expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
     const links = guide?.sections.flatMap((section) => section.links ?? []) ?? [];
@@ -759,7 +773,8 @@ describe("public SEO routes", () => {
     expect(body).toContain("/analyze");
     expect(body).toContain("/guides");
     expect(body).toContain(ACTION_INSTALL_PATH);
-    expect(body).toContain("ipinney/causeci/action@main");
+    expect(body).toContain("uses: ipinney/causeci@v1");
+    expect(body).toContain("uses: ipinney/causeci@<commit-sha>");
     expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
     expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
     const links = guide?.sections.flatMap((section) => section.links ?? []) ?? [];
@@ -848,7 +863,8 @@ describe("public SEO routes", () => {
     expect(body).toContain("/analyze");
     expect(body).toContain("/guides");
     expect(body).toContain(ACTION_INSTALL_PATH);
-    expect(body).toContain("ipinney/causeci/action@main");
+    expect(body).toContain("uses: ipinney/causeci@v1");
+    expect(body).toContain("uses: ipinney/causeci@<commit-sha>");
     expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
     expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
     const links = guide?.sections.flatMap((section) => section.links ?? []) ?? [];
@@ -944,7 +960,8 @@ describe("public SEO routes", () => {
     expect(body).toContain("/analyze");
     expect(body).toContain("/guides");
     expect(body).toContain(ACTION_INSTALL_PATH);
-    expect(body).toContain("ipinney/causeci/action@main");
+    expect(body).toContain("uses: ipinney/causeci@v1");
+    expect(body).toContain("uses: ipinney/causeci@<commit-sha>");
     expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
     expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
     const links = guide?.sections.flatMap((section) => section.links ?? []) ?? [];
@@ -1050,7 +1067,8 @@ describe("public SEO routes", () => {
     expect(body).toContain("/analyze");
     expect(body).toContain("/guides");
     expect(body).toContain(ACTION_INSTALL_PATH);
-    expect(body).toContain("ipinney/causeci/action@main");
+    expect(body).toContain("uses: ipinney/causeci@v1");
+    expect(body).toContain("uses: ipinney/causeci@<commit-sha>");
     expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
     expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
     const links = guide?.sections.flatMap((section) => section.links ?? []) ?? [];
@@ -1160,7 +1178,8 @@ describe("public SEO routes", () => {
     expect(body).toContain("/analyze");
     expect(body).toContain("/guides");
     expect(body).toContain(ACTION_INSTALL_PATH);
-    expect(body).toContain("ipinney/causeci/action@main");
+    expect(body).toContain("uses: ipinney/causeci@v1");
+    expect(body).toContain("uses: ipinney/causeci@<commit-sha>");
     expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
     expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
     const links = guide?.sections.flatMap((section) => section.links ?? []) ?? [];
@@ -1260,7 +1279,8 @@ describe("public SEO routes", () => {
     expect(body).toContain("/analyze");
     expect(body).toContain("/guides");
     expect(body).toContain(ACTION_INSTALL_PATH);
-    expect(body).toContain("ipinney/causeci/action@main");
+    expect(body).toContain("uses: ipinney/causeci@v1");
+    expect(body).toContain("uses: ipinney/causeci@<commit-sha>");
     expect(body).toMatch(/not a Marketplace publish|not on the Marketplace/i);
     expect(body).not.toMatch(/listed on the Marketplace|published to the Marketplace/i);
     const links = guide?.sections.flatMap((section) => section.links ?? []) ?? [];

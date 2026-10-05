@@ -2,7 +2,7 @@
 
 Post a **truncated teaser** and a link back to [CauseCI](https://causeci.vercel.app) when a GitHub Actions job fails.
 
-This directory is the Action source. **It is not published to the GitHub Marketplace.** Install it from this repository path. No CauseCI API key, no outbound email, and no secrets belong in this folder.
+This directory is the Action source. Root [`action.yml`](../action.yml) reuses `post-teaser.js` so callers can install `ipinney/causeci@v1`. **It is not on the GitHub Marketplace** until the owner submits the listing. No CauseCI API key, no outbound email, and no secrets belong in this folder.
 
 The Action does **not** upload your log to CauseCI. It writes a job summary (and an optional pull-request comment) that tells a human to paste the log themselves. The top cause on the site is free.
 
@@ -34,18 +34,20 @@ jobs:
         run: npm test 2>&1 | tee ci.log
       - name: CauseCI teaser
         if: failure()
-        uses: ipinney/causeci/action@main
+        uses: ipinney/causeci@v1
         with:
           log-path: ci.log
 ```
 
-Pin a commit SHA instead of `@main` if you want a frozen install:
+Pin a full commit SHA instead of the moving `v1` tag for a hardened, frozen install:
 
 ```yaml
-uses: ipinney/causeci/action@<commit-sha>
+uses: ipinney/causeci@<commit-sha>
 ```
 
-CauseCI is a public repository. Public callers can use `ipinney/causeci/action@main` (or a pinned SHA). Private caller repositories are fine — they do not need extra access to this Action.
+`uses: ipinney/causeci/action@...` still runs this directory’s `action.yml` for anyone already on that path.
+
+CauseCI is a public repository. Public callers can use `ipinney/causeci@v1` (or a pinned SHA). Private caller repositories are fine — they do not need extra access to this Action.
 
 A copy-paste workflow also lives in [`example-workflow.yml`](./example-workflow.yml). Do not put that file under `.github/workflows/` unless you intend this repo to run it.
 
