@@ -116,9 +116,10 @@ export default function HomePage() {
           Post a teaser when CI fails
         </h2>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-          Install from <span className="font-mono text-foreground/90">ipinney/causeci/action@main</span>{" "}
-          (or a pinned SHA). Truncated excerpt and a paste link only — no log
-          upload, not Marketplace. CauseCI is public; private caller repos are fine.
+          Install with <span className="font-mono text-foreground/90">ipinney/causeci@v1</span>{" "}
+          (pin a commit SHA for a hardened install). Truncated excerpt and a paste
+          link only — no log upload, not on the Marketplace. CauseCI is public;
+          private caller repos are fine.
         </p>
         <p className="mt-4">
           <Link

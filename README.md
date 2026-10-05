@@ -29,7 +29,7 @@ Identity / publish surfaces only — no paid ads, no outbound email or DMs.
   - [ESLint failed in GitHub Actions](/guides/eslint-failed-github-actions)
   - [TypeScript / tsc failed in GitHub Actions](/guides/typescript-failed-github-actions)
   - [Install the CauseCI GitHub Action](/guides/install-github-action-failure-teaser) (`/docs/action` redirects here)
-- Optional [GitHub Action teaser](./action/README.md) under `action/` — posts a truncated excerpt + paste link on failure. **Not published to the Marketplace**; install from `ipinney/causeci/action@<ref>`. Public install docs: [/guides/install-github-action-failure-teaser](https://causeci.vercel.app/guides/install-github-action-failure-teaser)
+- Optional [GitHub Action teaser](./action/README.md) under `action/` — posts a truncated excerpt + paste link on failure. **Not on the Marketplace** (root `action.yml` is ready for the owner to submit the listing). Install with `uses: ipinney/causeci@v1`. Pin a full commit SHA (`uses: ipinney/causeci@<commit-sha>`) for a hardened install. `ipinney/causeci/action@...` still works. Public install docs: [/guides/install-github-action-failure-teaser](https://causeci.vercel.app/guides/install-github-action-failure-teaser)
 
 ## Operator kill metric
 

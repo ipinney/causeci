@@ -25,7 +25,10 @@ jobs:
         run: npm test 2>&1 | tee ci.log
       - name: CauseCI teaser
         if: failure()
-        uses: ipinney/causeci/action@main
+        # Recommended: ipinney/causeci@v1
+        # Hardened: pin a full commit SHA — uses: ipinney/causeci@<commit-sha>
+        # Existing installs of ipinney/causeci/action@... keep working.
+        uses: ipinney/causeci@v1
         with:
           log-path: ci.log
           app-url: https://causeci.vercel.app

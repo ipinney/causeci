@@ -1,5 +1,3 @@
-# Nested metadata for `uses: ipinney/causeci/action@<ref>`.
-# Root action.yml points at this same post-teaser.js for `uses: ipinney/causeci@v1`.
 name: CauseCI failure teaser
 description: On a failed job, write a truncated teaser and a CauseCI paste link to the job summary (and optionally the pull request).
 author: CauseCI
@@ -29,6 +27,8 @@ inputs:
     required: false
     default: "600"
 
+# Same Action as action/action.yml. `uses: ipinney/causeci@v1` resolves here;
+# `uses: ipinney/causeci/action@...` still runs action/post-teaser.js directly.
 runs:
   using: node20
-  main: post-teaser.js
+  main: action/post-teaser.js
